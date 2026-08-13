@@ -45,7 +45,7 @@ Progress will be tracked through Git commits, README files, screenshots, and req
 | Task | Status |
 |---|---|
 | Task 00 - Setup | Completed |
-| Task 01 - C# Logic Drills | Not Started |
+| Task 01 - C# Logic Drills | Completed | 
 | Task 02 - Bank Account System | Not Started |
 | Task 03 - Employee Management | Not Started |
 | Task 04 - Product Catalog with LINQ | Not Started |
