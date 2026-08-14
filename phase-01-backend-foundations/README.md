@@ -46,9 +46,9 @@ Progress will be tracked through Git commits, README files, screenshots, and req
 |---|---|
 | Task 00 - Setup | Completed |
 | Task 01 - C# Logic Drills | Completed | 
-| Task 02 - Bank Account System | Not Started |
+| Task 02 - Bank Account System | Completed |
 | Task 03 - Employee Management | Not Started |
 | Task 04 - Product Catalog with LINQ | Not Started |
 | Task 05 - Debug & Refactor Pack | Not Started |
-| Task 06 - SQL & ERD Starter | Not Started |
-| Task 07 - Interview Answers | Not Started |
+| Task 06 - SQL & ERD Starter | Completed |
+| Task 07 - Interview Answers | Completed |
