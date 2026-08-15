@@ -232,4 +232,3 @@ dotnet run
 * Code is separated into Model, Service, and UI
 * Seed data contains 12 employees
 * README documentation is included
-
