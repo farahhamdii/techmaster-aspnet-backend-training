@@ -40,7 +40,7 @@ Each task should be:
 
 Progress will be tracked through Git commits, README files, screenshots, and required evidence.
 
-## Progress
+## Progress 
 
 | Task | Status |
 |---|---|
@@ -52,3 +52,5 @@ Progress will be tracked through Git commits, README files, screenshots, and req
 | Task 05 - Debug & Refactor Pack | Completed|
 | Task 06 - SQL & ERD Starter | Completed |
 | Task 07 - Interview Answers | Completed |
+
+all done
