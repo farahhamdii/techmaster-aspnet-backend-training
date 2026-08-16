@@ -1,4 +1,4 @@
-# Task 05: Debug & Refactor Pack
+# Task 05: Debug & Refactor Pack.
 
 ## Overview
 This task focuses on debugging, analyzing, and refactoring a legacy console application that handles order calculations and invoice summaries.
