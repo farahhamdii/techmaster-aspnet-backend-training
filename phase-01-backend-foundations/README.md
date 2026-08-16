@@ -49,6 +49,6 @@ Progress will be tracked through Git commits, README files, screenshots, and req
 | Task 02 - Bank Account System | Completed |
 | Task 03 - Employee Management | Completed |
 | Task 04 - Product Catalog with LINQ | Completed |
-| Task 05 - Debug & Refactor Pack | Not Started |
+| Task 05 - Debug & Refactor Pack | Completed|
 | Task 06 - SQL & ERD Starter | Completed |
 | Task 07 - Interview Answers | Completed |
