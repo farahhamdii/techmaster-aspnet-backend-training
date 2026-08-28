@@ -22,11 +22,11 @@ namespace Task_01_csharp_drills
             //Drill13_PalindromeChecker.Run();
             // Drill14_ExpenseTracker.Run();
             //Drill15_ArrayRotation.Run();
-            Drill16_FrequencyCounter.Run();
+            //Drill16_FrequencyCounter.Run();
             //Drill17_SimpleSearchEngine.Run();
             //Drill18_NumberStatistics.Run();
             //Drill19_TicketPriceCalculator.Run();
-            //Drill20_MethodRefactoringChallenge.Run();
+            Drill20_MethodRefactoringChallenge.Run();
         }
     }
 }
