@@ -99,5 +99,40 @@ namespace ApiRoutingDrills.Controllers
             _notes.Remove(note);
             return NoContent(); // HTTP 204
         }
+        /*
+
+        // Drill 12: GET /api/notes?pageNumber=1&pageSize=5 (Pagination Demo)
+        [HttpGet]
+        public IActionResult GetAllNotes([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            // Validation
+            if (pageNumber <= 0)
+            {
+                return BadRequest(new { message = "pageNumber must be greater than 0" }); // 400 Bad Request
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new { message = "pageSize must be between 1 and 50" }); // 400 Bad Request
+            }
+
+            var totalCount = _notes.Count;
+
+            // Skip / Take Logic
+            var items = _notes
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return Ok(new
+            {
+                items,
+                pageNumber,
+                pageSize,
+                totalCount
+            });
+        }
+            */
+        
     }
 }
