@@ -1,0 +1,6 @@
+@rest_routing_drills_HostAddress = http://localhost:5009
+
+GET {{rest_routing_drills_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
