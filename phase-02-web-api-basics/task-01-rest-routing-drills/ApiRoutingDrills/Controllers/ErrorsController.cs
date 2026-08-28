@@ -6,7 +6,6 @@ namespace ApiRoutingDrills.Controllers
     [Route("api/errors")]
     public class ErrorsController : ControllerBase
     {
-        // Drill 15 Demo - Bad Request (400) Standard Error Shape
         [HttpGet("demo/bad-request")]
         public IActionResult GetBadRequestErrorDemo()
         {
