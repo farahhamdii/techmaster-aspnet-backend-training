@@ -26,50 +26,37 @@ task-01-rest-routing-drills/
 
 
 ---
+# Task 01 - REST & Routing Drill Pack
 
-## 🚀 Implemented Drills & Endpoints
+This project contains 15 API drills demonstrating foundational Web API concepts in ASP.NET Core, including controllers, route parameters, query strings, DTOs, response shapes, and HTTP status codes.
 
-### 1. Health Check (`HealthController`)
-* **`GET /api/health`**[cite: 1]
-  * **Description:** Returns the operational status of the API with server timestamp[cite: 1].
-  * **Response:** `200 OK`[cite: 1]
+## Drills Progress Table
 
----
-
-### 2. Tools & Conversions (`ToolsController`)
-* **`GET /api/tools/echo/{name}`**[cite: 1]
-  * **Description:** Echoes back the provided name via route parameter[cite: 1].
-  * **Binding:** `[FromRoute]`[cite: 1]
-  * **Response:** `200 OK` or `400 BadRequest` if empty[cite: 1].
-
-* **`GET /api/tools/convert?celsius={value}`**[cite: 1]
-  * **Description:** Converts Celsius temperature to Fahrenheit[cite: 1].
-  * **Binding:** `[FromQuery]`[cite: 1]
-  * **Response:** `200 OK`[cite: 1]
-
----
-
-### 3. Mathematical Operations (`CalculatorController`)
-* **`GET /api/calculator/add?a={num1}&b={num2}`**[cite: 1]
-  * **Description:** Performs addition of two numbers[cite: 1].
-* **`GET /api/calculator/subtract?a={num1}&b={num2}`**[cite: 1]
-  * **Description:** Performs subtraction[cite: 1].
-* **`GET /api/calculator/multiply?a={num1}&b={num2}`**[cite: 1]
-  * **Description:** Performs multiplication[cite: 1].
-* **`GET /api/calculator/divide?a={num1}&b={num2}`**[cite: 1]
-  * **Description:** Performs division with validation for division by zero[cite: 1].
-  * **Response:** `200 OK` or `400 BadRequest` (on division by zero)[cite: 1].
+| Drill No. | Endpoint | Concept | Status | Evidence |
+| :--- | :--- | :--- | :---: | :--- |
+| **Drill 01** | `GET /api/health` | Basic endpoint / controller action | Done | Swagger / Postman Screenshot |
+| **Drill 02** | `GET /api/tools/echo/{name}` | Route parameter | Done | Swagger / Postman Screenshot |
+| **Drill 03** | `GET /api/calculator/add` | Query parameters (`?a=10&b=5`) | Done | Swagger / Postman Screenshot |
+| **Drill 04** | `GET /api/converter/celsius-to-fahrenheit` | Business calculation endpoint | Done | Swagger / Postman Screenshot |
+| **Drill 05** | `GET /api/grades/calculate` | Validation + Range conditions | Done | Swagger / Postman Screenshot |
+| **Drill 06** | `POST /api/notes` | Request body DTO (`[FromBody]`) | Done | Swagger / Postman Screenshot |
+| **Drill 07** | `GET /api/notes` | Collection response | Done | Swagger / Postman Screenshot |
+| **Drill 08** | `GET /api/notes/{id}` | Route parameters + 404 handling | Done | Swagger / Postman Screenshot |
+| **Drill 09** | `PUT /api/notes/{id}` | Resource update via PUT | Done | Swagger / Postman Screenshot |
+| **Drill 10** | `DELETE /api/notes/{id}` | Resource deletion + status codes | Done | Swagger / Postman Screenshot |
+| **Drill 11** | `GET /api/notes/search` | Search query filter (`?keyword=...`) | Done | Swagger / Postman Screenshot |
+| **Drill 12** | `GET /api/notes?pageNumber=1&pageSize=5` | Skip / Take Pagination | Done | Swagger / Postman Screenshot |
+| **Drill 13** | `GET /api/request-info` | Request Headers (`X-Student-Name`) | Done | Swagger / Postman Screenshot |
+| **Drill 14** | Various (`GET` / `POST`) | HTTP Status Codes practice (200, 201, 204, 400, 404) | Done | Swagger / Postman Screenshot |
+| **Drill 15** | `GET /api/errors/demo` | Standard Error Response Format | Done | Swagger / Postman Screenshot |
 
 ---
 
-### 4. Notes Resource (`NotesController`)
-* **`POST /api/notes`**[cite: 1]
-  * **Description:** Creates a new note from JSON body payload[cite: 1].
-  * **Binding:** `[FromBody]` via `CreateNoteRequest` DTO[cite: 1].
-  * **Response:** `201 Created` or `400 BadRequest`[cite: 1].
-
----
-
+## How to Run & Test
+1. Clone the repository and navigate to `phase-02-web-api-basics/task-01-rest-routing-drills`.
+2. Run `dotnet restore` and `dotnet run`.
+3. Open Swagger UI at `https://localhost:{port}/swagger`.
+4. Test the endpoints using Swagger UI or Postman.
 ## 🧪 Testing & Verification
 All endpoints were tested and verified using **Postman** and **Swagger UI**[cite: 1]. 
 Evidence screenshots for headers, request parameters, and JSON payloads are saved in the dedicated Google Drive folder[cite: 1].
