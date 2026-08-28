@@ -6,9 +6,8 @@ This repository contains the implementation of **Task 01: REST & Routing Drills*
 The objective of this task is to master HTTP verbs, RESTful routing conventions, parameter binding (`[FromRoute]`, `[FromQuery]`, `[FromBody]`), and status codes in ASP.NET Core Web API[cite: 1].
 
 ---
-
 ## 🛠 Project Structure
-
+```text
 task-01-rest-routing-drills/
   ├── README.md
   └── ApiRoutingDrills/
@@ -23,11 +22,7 @@ task-01-rest-routing-drills/
       ├── Services/
       │   └── ConverterService.cs
       └── Program.cs
-
-
----
-# Task 01 - REST & Routing Drill Pack
-
+```[cite: 1]
 This project contains 15 API drills demonstrating foundational Web API concepts in ASP.NET Core, including controllers, route parameters, query strings, DTOs, response shapes, and HTTP status codes.
 
 ## Drills Progress Table
