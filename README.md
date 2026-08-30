@@ -11,11 +11,6 @@
 
 This repository contains my work during the TechMaster ASP.NET Backend Career Training.
 
-## Phase 01
-
-### Backend Foundations
-
-This phase focuses on strengthening C# fundamentals, OOP, LINQ, SQL, ERD design, debugging, refactoring, and backend problem-solving skills.
 
 ## Phase Folders
 
