@@ -46,25 +46,6 @@ The phase covers REST principles, HTTP methods and status codes, routing, DTOs, 
 * Git & GitHub
 * API Documentation
 
-## Task 06 - API Standards & Refactor Pack
-
-This task focused on refactoring a poorly designed API into a cleaner and more professional structure.
-
-### Main Improvements
-
-* Replaced public fields with properties.
-* Added `CreateProductRequest` DTO.
-* Added `ProductResponse` DTO.
-* Added `IProductService`.
-* Added `ProductService`.
-* Moved validation and business logic out of the controller.
-* Used RESTful routes.
-* Corrected HTTP status codes.
-* Used `400 Bad Request` for invalid data.
-* Used `404 Not Found` when a product does not exist.
-* Used `201 Created` when creating a product.
-* Improved controller structure.
-* Added API documentation through README.
 
 ## Phase 02 Progress
 
