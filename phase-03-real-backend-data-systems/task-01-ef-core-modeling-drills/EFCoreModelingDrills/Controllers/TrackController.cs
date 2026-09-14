@@ -1,8 +1,9 @@
 ﻿using EFCoreModelingDrills.Data;
+using EFCoreModelingDrills.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace EFCoreModelingDrills.Controllers;
+namespace task_01_drills.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -37,5 +38,26 @@ public class TrackController : ControllerBase
             e.EnrollmentDate,
             e.FinalGrade
         }));
+    }
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTrackDetails(int id) 
+    {
+        var track = await _context.Tracks
+            .Where(t => t.Id == id)
+            .Select(t => new TrackDetailsDto
+            {
+                Id = t.Id,
+                Name = t.Name,
+                InstructorId = t.InstructorId,
+                InstructorName = t.Instructor.FullName
+            })
+            .FirstOrDefaultAsync();
+        if (track == null)
+        {
+            return NotFound("track not found");
+        }
+
+        return Ok(track);
+            
     }
 }

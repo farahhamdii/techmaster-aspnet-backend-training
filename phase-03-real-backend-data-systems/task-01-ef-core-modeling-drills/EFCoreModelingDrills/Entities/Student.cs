@@ -9,8 +9,11 @@ public class Student
     public string Email { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
-
+    public DateTime? UpdatedAt { get; set; }
     public bool IsActive { get; set; }
+    public bool IsDeleted { get; set; }
+
+    public DateTime? DeletedAt { get; set; }
     public StudentProfile? Profile { get; set; }
     public ICollection<Enrollment> Enrollments { get; set; }
     = new List<Enrollment>();
