@@ -1,37 +1,68 @@
-# Task 03 - Training Center Database API
+# Task 03 - Training Center Database API 🎓
 
-## Overview
+An enterprise-grade RESTful API built with ASP.NET Core, Entity Framework Core, and SQL Server. This project manages training center operations—including students, instructors, training tracks, enrollments, payments, and analytical business reports—leveraging clean layered architecture, robust business validation, DTO projections, soft deletes, and complex LINQ aggregations.
 
-This task implements a data-driven Training Center Registration API using ASP.NET Core Web API, Entity Framework Core, and SQL Server.
+## 📋 Table of Contents
 
-The API manages:
+- [Overview](#-overview)
+- [Architecture & Layers](#-architecture--layers)
+- [Technologies & Tools](#-technologies--tools)
+- [Database Model & ERD](#-database-model--erd)
+- [Key Features](#-key-features)
+- [Business Rules & Validation](#-business-rules--validation)
+- [Reporting & Aggregations](#-reporting--aggregations)
+- [API Response Structure](#-api-response-structure)
+- [Getting Started & Installation](#-getting-started--installation)
+- [Database Setup & Migrations](#-database-setup--migrations)
+- [Testing & Verification](#-testing--verification)
 
-- Students
-- Instructors
-- Training Tracks
-- Enrollments
-- Payments
-- Reports
+## 🎯 Overview
 
-The task focuses on building a real relational backend with EF Core, SQL Server, business rules, DTOs, LINQ queries, and reporting endpoints.
+The Training Center API handles end-to-end workflows for an IT educational institute:
 
----
+- **Student & Instructor Management**: Full lifecycle management with duplicate prevention and soft-delete capabilities.
+- **Track Administration**: Capacity tracking, status filters, and schedule validation.
+- **Enrollments**: Safe registration system preventing double-booking and capacity overruns.
+- **Payment Tracking**: Multi-status payment logging linked directly to enrollments.
+- **Business Intelligence & Reports**: Aggregated financial metrics, seat availability, and unpaid enrollment metrics using optimized LINQ queries.
 
-## Technologies
+## 🏗 Architecture & Layers
 
-- C#
-- ASP.NET Core Web API
-- Entity Framework Core
-- SQL Server
-- LINQ
-- Swagger / OpenAPI
-- Postman
+The project strictly separates concerns using a clear 4-tier design pattern:
 
----
+```
+               ┌──────────────────────────────┐
+               │         Client / UI          │
+               │   (Swagger / Postman App)    │
+               └──────────────┬───────────────┘
+                              │ HTTP Requests
+                              ▼
+               ┌──────────────────────────────┐
+               │      Controllers Layer       │
+               │  (Routing & HTTP Responses)  │
+               └──────────────┬───────────────┘
+                              │ DTOs
+                              ▼
+               ┌──────────────────────────────┐
+               │        Services Layer        │
+               │  (Business Rules & Logic)    │
+               └──────────────┬───────────────┘
+                              │ LINQ Projections
+                              ▼
+               ┌──────────────────────────────┐
+               │  Data / DbContext (EF Core)  │
+               │    (ORM & Entity Mappings)   │
+               └──────────────┬───────────────┘
+                              │ ADO.NET / SQL
+                              ▼
+               ┌──────────────────────────────┐
+               │     SQL Server Database      │
+               └──────────────────────────────┘
+```
 
-## Project Structure
+### Folder Structure
 
-```text
+```
 TrainingCenter/
 │
 ├── Controllers/
@@ -72,446 +103,207 @@ TrainingCenter/
 │   └── ApiResponse.cs
 │
 └── Migrations/
-Database Model
+```
 
-The database contains five main entities:
+## 🛠 Technologies & Tools
 
-Student
-Instructor
-TrainingTrack
-Enrollment
-Payment
-Relationships
-Instructor → TrainingTracks: One-to-Many
-Student → Enrollments: One-to-Many
-TrainingTrack → Enrollments: One-to-Many
-Enrollment → Payments: One-to-Many
-Enrollment Relationship
+- **Language**: C# (.NET 8/9)
+- **Framework**: ASP.NET Core Web API
+- **ORM**: Entity Framework Core
+- **Database**: Microsoft SQL Server
+- **Query Language**: LINQ (Language Integrated Query)
+- **API Documentation**: Swagger / OpenAPI
+- **API Testing**: Postman & Swagger UI
 
-Enrollment represents the relationship between Student and TrainingTrack.
+## 🗄 Database Model & ERD
 
-This allows the system to store information specific to each registration, such as:
+The relational schema consists of 5 core domain entities designed with strict foreign key constraints, indexes, and deletion behaviors:
 
-Enrollment Date
-Status
-Progress Percentage
-Final Result
-API Features
-Students
-Get all students
-Get student by ID
-Create student
-Update student
-Soft delete student
-Instructors
-Get all instructors
-Get instructor by ID
-Create instructor
-Update instructor
-Get instructor tracks
-Training Tracks
-Get all tracks
-Filter by keyword
-Filter by level
-Filter by status
-Filter by instructor
-Get track details
-Create track
-Update track
-Soft delete track
-Enrollments
-Get all enrollments
-Filter by status
-Filter by student
-Filter by track
-Filter by payment status
-Get enrollment details
-Create enrollment
-Update enrollment status
-Get student enrollments
-Get track students
-Payments
-Get all payments
-Filter by date range
-Filter by payment status
-Get payment by ID
-Create payment
-Update payment status
-Get enrollment payments
-Reports
-Dashboard summary
-Unpaid enrollments
-Track capacity
-Revenue summary
-Revenue by track
-Business Rules
+```
+┌──────────────┐       1 : N       ┌──────────────────┐       1 : N       ┌────────────────┐
+│  Instructor  │ ────────────────> │  TrainingTrack   │ ────────────────> │   Enrollment   │
+└──────────────┘                   └──────────────────┘                   └───────┬────────┘
+                                                                                    │
+                                                                             1 : N  │  N : 1
+                                                                                    │
+┌──────────────┐                          ┌──────────────────┐                     │
+│   Payment    │ <─────────────────────── │    Student       │ <───────────────────┘
+└──────────────┘          1 : N           └──────────────────┘
+```
 
-The application implements several business rules:
+### Entity Relationships Summary
 
-Students
-Student email must be unique.
-Deleted students are excluded from normal operations.
-Student deletion is implemented as soft delete.
-Instructors
-Instructor email must be unique.
-Only active instructors can be assigned to training tracks.
-Training Tracks
-Track code must be unique.
-Capacity must be greater than zero.
-End date must be after start date.
-Track capacity cannot be reduced below the number of active enrollments.
-A track with active enrollments cannot be deleted.
-Track deletion is implemented as soft delete.
-Enrollments
-Student must exist and be active.
-Training track must exist and be active.
-A student cannot enroll in the same track more than once.
-A student cannot enroll if the track has reached its capacity.
-Enrollment status supports controlled values such as:
-Active
-Completed
-Cancelled
-Payments
-Payment amount must be greater than zero.
-Payment reference number must be unique.
-Payment must belong to an existing enrollment.
-Payment status supports:
-Pending
-Paid
-Failed
-Refunded
-EF Core
+| Primary Entity | Target Entity | Cardinality | Key Relationship Description |
+|---|---|---|---|
+| Instructor | TrainingTrack | 1 : N | An instructor can mentor multiple training tracks. |
+| Student | Enrollment | 1 : N | A student can hold multiple course enrollments. |
+| TrainingTrack | Enrollment | 1 : N | A track can host multiple student enrollments. |
+| Enrollment | Payment | 1 : N | An enrollment can have multiple payment records. |
 
-Entity Framework Core is used for:
+## ✨ Key Features
 
-Entity modeling
-Database relationships
-Foreign keys
-Unique indexes
-Constraints
-LINQ queries
-Projections
-Aggregations
-Migrations
-SQL Server integration
+### 👤 Students
+- Fetch paginated/filtered lists of students.
+- Fetch detailed student history (enrolled tracks, payment records).
+- Create & update student profiles.
+- **Soft Deletion**: Marks `IsDeleted = true` and updates `DeletedAt` timestamp without destroying historical audit data.
 
-The API uses DTO projections instead of exposing EF Core entities directly.
+### 👨‍🏫 Instructors
+- Instructor management with active status flags.
+- Fetch all tracks assigned to a specific instructor.
+- Email uniqueness validation.
 
-DTOs
+### 📚 Training Tracks
+- Track catalog management filtered by Keyword, Level, Status, and Instructor.
+- Automatic calculation of available seats vs maximum capacity.
+- Schedule constraints enforcement (Start Date must precede End Date).
 
-DTOs are used to control the data exchanged between the API and clients.
+### 📝 Enrollments
+- Multi-criteria filtering by Status, Student ID, Track ID, and Payment Status.
+- Duplicate registration checks per student-track pair.
+- Controlled status transitions (Active, Completed, Cancelled).
 
-Examples include:
+### 💳 Payments
+- Multi-status financial transaction logging (Pending, Paid, Failed, Refunded).
+- Unique reference tracking per transaction.
+- Date-range filtering for revenue auditing.
 
-CreateStudentRequest
-UpdateStudentRequest
-StudentListItemResponse
-StudentDetailsResponse
-CreateInstructorRequest
-UpdateInstructorRequest
-CreateTrackRequest
-UpdateTrackRequest
-TrackListItemResponse
-TrackDetailsResponse
-CreateEnrollmentRequest
-EnrollmentDetailsResponse
-CreatePaymentRequest
-PaymentResponse
-Report DTOs
+## 🛡 Business Rules & Validation
 
-This keeps API responses separated from the database entities.
+Business logic validation takes place inside the dedicated Service Layer:
 
-API Response Format
+- **Email Uniqueness**: Both Student and Instructor email addresses must be unique across the system.
+- **Active Status Mandates**: Only active instructors can be assigned to new training tracks.
+- **Track Capacity Limits**:
+  - Track capacity must be greater than zero.
+  - Track capacity cannot be reduced below the count of active enrollments.
+  - Registrations are blocked automatically if Enrolled Students == Capacity.
+- **Enrollment Uniqueness**: A student cannot enroll in the same training track more than once.
+- **Track Schedule Rules**: Track `EndDate` must strictly occur after `StartDate`.
+- **Safe Deletion Shield**: A track with active student enrollments cannot be deleted.
+- **Financial Integrity**: Payment amounts must be strictly greater than $0.00.
 
-The API uses a common response wrapper:
+## 📊 Reporting & Aggregations
 
+The `ReportService` leverages EF Core LINQ projections (`Select`, `GroupBy`, `SumAsync`, `CountAsync`) to construct high-level business analytics:
+
+- **Dashboard Summary**:
+  - Total & Active Student count
+  - Total & Active Tracks
+  - Total Enrollments & Active registrations
+  - Cumulative paid revenue
+- **Track Capacity Report**:
+  - Total Capacity vs Enrolled Seats per track.
+  - Dynamic calculation of `AvailableSeats` and boolean `IsFull`.
+- **Revenue Analytics**:
+  - Revenue broken down by Track (Total Revenue, Number of Paid Transactions).
+  - Revenue summary filtered by custom date ranges.
+- **Unpaid Enrollments Tracking**:
+  - Groups enrollments by payment completion status (Unpaid vs Partially Paid vs Fully Paid).
+
+### Payment Reporting Assumption
+
+Since `TrainingTrack` does not currently define a static course fee, payment status classification is determined as follows:
+
+- No Paid Payments: **Unpaid**
+- ≥ 1 Paid Payment: **Partially Paid / Active**
+- Revenue calculations aggregate only transactions where `PaymentStatus == Paid`.
+
+## 📩 API Response Structure
+
+All endpoints return a uniform REST response wrapper `ApiResponse<T>`:
+
+```json
 {
   "success": true,
   "message": "Student retrieved successfully.",
-  "data": {}
+  "data": {
+    "id": 1,
+    "fullName": "Student Name",
+    "email": "student@example.com",
+    "isActive": true
+  }
 }
+```
 
-This provides a consistent response structure across the API.
+## 🚀 Getting Started & Installation
 
-Validation
+### Prerequisites
 
-Business validation is implemented in the service layer.
+- .NET 8.0 SDK or higher
+- SQL Server Express / LocalDB / Enterprise
+- Visual Studio 2022 OR VS Code
 
-Examples include:
+### Step-by-Step Setup
 
-Duplicate email validation
-Duplicate track code validation
-Capacity validation
-Date validation
-Student and track existence validation
-Duplicate enrollment validation
-Payment amount validation
-Payment reference validation
-Payment status validation
-Enrollment status validation
-LINQ and Queries
+**1. Clone the Repository**
 
-The project uses LINQ extensively for querying and reporting data.
+```bash
+git clone https://github.com/your-username/TrainingCenter.git
+cd TrainingCenter
+```
 
-Examples include:
+**2. Configure Database Connection**
 
-Where
-Any
-FirstOrDefaultAsync
-CountAsync
-SumAsync
-Select
-GroupBy
+Update `appsettings.json` with your local SQL Server instance connection string:
 
-Examples of implemented queries include:
-
-Filtering tracks
-Checking whether a student is already enrolled
-Checking track capacity
-Counting active enrollments
-Calculating total paid revenue
-Calculating revenue by track
-Filtering enrollments by payment status
-Reports and Aggregations
-
-The reporting layer provides business-level information using EF Core and LINQ.
-
-Dashboard Summary
-
-Returns:
-
-Total students
-Active students
-Total instructors
-Total tracks
-Active tracks
-Total enrollments
-Active enrollments
-Total revenue
-Track Capacity
-
-Returns:
-
-Track
-Capacity
-Enrolled students
-Available seats
-Whether the track is full
-Revenue Summary
-
-Returns:
-
-Total revenue
-Total payments
-Paid payments
-Revenue By Track
-
-Returns:
-
-Track
-Total paid revenue
-Number of paid payments
-Unpaid Enrollments
-
-Returns enrollments based on their payment information.
-
-Important Payment Report Assumption
-
-The current TrainingTrack entity does not contain a course fee.
-
-Because of this, the system cannot calculate:
-
-Remaining amount
-Exact partially paid amount
-Fully paid status based on a required fee
-
-For the current implementation:
-
-No paid payment → Unpaid
-At least one paid payment → Partially Paid
-
-Revenue is calculated by summing payments where:
-
-PaymentStatus = Paid
-Database Setup
-
-Example connection string:
-
+```json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=.\\SQLEXPRESS;Database=TechMasterTrainingCenterDb;Trusted_Connection=True;TrustServerCertificate=True;"
   }
 }
-Create Migration
-dotnet ef migrations add InitialCreate
-Update Database
-dotnet ef database update
-Running the Project
+```
 
-Restore dependencies:
+**3. Restore Dependencies**
 
+```bash
 dotnet restore
+```
 
-Build the project:
+**4. Build Solution**
 
+```bash
 dotnet build
+```
 
-Run the API:
+## 🗄 Database Setup & Migrations
 
+Execute EF Core migrations to automatically generate the database schema:
+
+```bash
+# Add a new migration (if modifying entities)
+dotnet ef migrations add InitialCreate
+
+# Apply migrations to SQL Server
+dotnet ef database update
+```
+
+## 🧪 Testing & Verification
+
+**1. Run the API Application**
+
+```bash
 dotnet run
+```
 
-Open Swagger:
+**2. Access Interactive Swagger UI**
 
+Open your browser and navigate to:
+
+```
 https://localhost:<port>/swagger
-Testing
+```
 
-The API was tested using:
+**3. Postman Collection**
 
-Swagger
-Postman
-SQL Server Management Studio
+Import the API routes into Postman to test:
+- CRUD flow for Students, Instructors, and Tracks.
+- Validation triggers (e.g., duplicate email creation attempt).
+- Report generation metrics under `/api/reports/dashboard`.
 
-Test data was added to:
+---
 
-Students
-Instructors
-Training Tracks
-Enrollments
-Payments
+## 🏁 Task Status: Completed ✅
 
-The test data covers different scenarios such as:
-
-Active students
-Completed enrollments
-Paid payments
-Pending payments
-Unpaid enrollments
-Available track capacity
-Revenue calculations
-Testing Scenarios
-
-The API can be tested for:
-
-CRUD Operations
-Create
-Read
-Update
-Delete
-Filtering
-Track keyword
-Track level
-Track status
-Instructor
-Enrollment status
-Payment status
-Payment date range
-Business Rules
-Duplicate student email
-Duplicate instructor email
-Duplicate track code
-Duplicate enrollment
-Full track enrollment
-Invalid track dates
-Invalid capacity
-Invalid payment amount
-Invalid payment status
-Invalid enrollment status
-Reports
-Dashboard summary
-Unpaid enrollments
-Track capacity
-Revenue summary
-Revenue by track
-Soft Delete
-
-Soft delete is used instead of permanently removing certain records.
-
-For example, a Student can be marked as:
-
-IsDeleted = true
-
-and the deletion time is stored in:
-
-DeletedAt
-
-Training Tracks also support soft delete through:
-
-IsDeleted
-
-This preserves historical data while preventing deleted records from appearing in normal operations.
-
-Architecture
-
-The project follows a simple layered architecture:
-
-Controller
-    ↓
-Service
-    ↓
-DbContext
-    ↓
-SQL Server
-Controllers
-
-Controllers handle:
-
-HTTP requests
-HTTP responses
-Status codes
-Routing
-Services
-
-Services contain:
-
-Business rules
-Validation
-LINQ queries
-Data processing
-DbContext
-
-The DbContext handles:
-
-Entity configuration
-Relationships
-Database communication
-EF Core operations
-Key Learning Outcomes
-
-This task demonstrates practical backend development skills including:
-
-Designing relational databases
-Modeling relationships with EF Core
-Creating SQL Server databases using migrations
-Building RESTful APIs
-Using DTOs
-Implementing service layers
-Writing LINQ queries
-Using projections
-Applying business rules
-Implementing soft delete
-Filtering and reporting data
-Handling database relationships
-Working with aggregations
-Testing APIs using Swagger and Postman
-Debugging EF Core and SQL Server queries
-Task Status
-
-Completed
-
-The Training Center API includes:
-
-Entity modeling
-SQL Server database
-EF Core configuration
-Migrations
-CRUD operations
-DTOs
-Service layer
-Business validation
-Filtering
-Enrollments
-Payments
-Reports
-Soft delete
-Swagger testing
-Postman testing
+All core requirements, entity relationships, business validation rules, soft deletion mechanics, LINQ aggregations, and OpenAPI documentation have been fully implemented and verified.
