@@ -5,7 +5,7 @@
 
 - Name: Farah Hamdi
 - Track: ASP.NET Backend Career Training
-- Phase: Phase 01 - Backend Foundations
+
 
 ## Training Repository
 
