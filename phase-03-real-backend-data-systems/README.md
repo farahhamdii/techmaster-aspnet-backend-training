@@ -369,8 +369,8 @@ Final Demo
 | Task                                           | Status      |
 | ---------------------------------------------- | ----------- |
 | Task 00 - Workspace & Environment Setup        | Completed   |
-| Task 01 - EF Core Modeling Drills              | Planned  |
-| Task 02 - Requirements to ERD                  | Planned |
+| Task 01 - EF Core Modeling Drills              | Completed  |
+| Task 02 - Requirements to ERD                  | Completed |
 | Task 03 - Training Center Database API         | Planned     |
 | Task 04 - Querying, Filtering & Reporting      | Planned     |
 | Task 05 - Business Rules & Data Integrity      | Planned     |
