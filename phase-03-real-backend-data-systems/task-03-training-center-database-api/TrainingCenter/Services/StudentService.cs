@@ -14,18 +14,77 @@ namespace TrainingCenter.Services
             
         }
 
-        public async Task<List<StudentListItemResponse>> GetAllAsync()
+        public async Task<List<StudentListItemResponse>> GetAllAsync(
+      string? search = null,
+      bool? isActive = null)
         {
-            return await _context.Students
-                .Where(s=>!s.IsDeleted)
-                .Select(s=> new StudentListItemResponse
+            var query = _context.Students
+                .Where(s => !s.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(s =>
+                    s.FullName.Contains(search) ||
+                    s.Email.Contains(search) ||
+                    s.PhoneNumber.Contains(search));
+            }
+
+            if (isActive.HasValue)
+            {
+                query = query.Where(s => s.IsActive == isActive.Value);
+            }
+
+            return await query
+                .Select(s => new StudentListItemResponse
                 {
-                    StudentId=s.StudentId,
-                    FullName=s.FullName,
-                    Email=s.Email,
-                    PhoneNumber=s.PhoneNumber,
-                    IsActive=s.IsActive
-                }).ToListAsync();
+                    StudentId = s.StudentId,
+                    FullName = s.FullName,
+                    Email = s.Email,
+                    PhoneNumber = s.PhoneNumber,
+                    IsActive = s.IsActive
+                })
+                .ToListAsync();
+        }
+        public async Task<PagedResultDto<StudentListItemResponse>> GetPagedStudentsAsync(
+    int pageNumber,
+    int pageSize)
+        {
+            if (pageNumber <= 0)
+                throw new ArgumentException("Page number must be greater than 0.");
+
+            if (pageSize <= 0 || pageSize > 100)
+                throw new ArgumentException("Page size must be between 1 and 100.");
+
+            var query = _context.Students
+                .AsNoTracking();
+
+            var totalCount = await query.CountAsync();
+
+            var totalPages = (int)Math.Ceiling(
+                totalCount / (double)pageSize);
+
+            var students = await query
+                .OrderBy(s => s.StudentId)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+      .Select(s => new StudentListItemResponse
+      {
+          StudentId = s.StudentId,
+          FullName = s.FullName,
+          Email = s.Email,
+          PhoneNumber = s.PhoneNumber,
+          IsActive = s.IsActive
+      })
+                .ToListAsync();
+
+            return new PagedResultDto<StudentListItemResponse>
+            {
+                TotalCount = totalCount,
+                TotalPages = totalPages,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Items = students
+            };
         }
         public async Task<StudentDetailsResponse?> GetByIdAsync(int id)
         {
@@ -124,6 +183,8 @@ namespace TrainingCenter.Services
 
             return true;
         }
+
+
 
     }
 }

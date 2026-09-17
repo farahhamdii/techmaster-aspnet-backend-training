@@ -17,9 +17,11 @@ public class StudentController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+    string? search,
+    bool? isActive)
     {
-        var students = await _studentService.GetAllAsync();
+        var students = await _studentService.GetAllAsync(search, isActive);
 
         return Ok(new ApiResponse<List<StudentListItemResponse>>
         {
@@ -27,6 +29,28 @@ public class StudentController : ControllerBase
             Message = "Students retrieved successfully.",
             Data = students
         });
+    }
+
+
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetStudents(
+    int pageNumber = 1,
+    int pageSize = 10)
+    {
+        try
+        {
+            var result = await _studentService
+                .GetPagedStudentsAsync(pageNumber, pageSize);
+
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
     [HttpGet("{id}")]

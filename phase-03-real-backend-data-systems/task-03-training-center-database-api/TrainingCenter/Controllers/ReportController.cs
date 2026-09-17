@@ -78,4 +78,65 @@ public class ReportsController : ControllerBase
             Data = result
         });
     }
+    [HttpGet("tracks-with-available-seats")]
+    public async Task<IActionResult> GetTracksWithAvailableSeats()
+    {
+        var tracks = await _reportService
+            .GetTracksWithAvailableSeatsAsync();
+
+        return Ok(new ApiResponse<List<TrackAvailableSeatsResponse>>
+        {
+            Success = true,
+            Message = "Tracks with available seats retrieved successfully.",
+            Data = tracks
+        });
+    }
+    [HttpGet("top-tracks")]
+    public async Task<IActionResult> GetTopTracks(int top = 5)
+    {
+        try
+        {
+            var result = await _reportService.GetTopTracksAsync(top);
+
+            return Ok(new ApiResponse<List<TopTrackResponse>>
+            {
+                Success = true,
+                Message = "Top tracks retrieved successfully.",
+                Data = result
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ApiResponse<object>
+            {
+                Success = false,
+                Message = ex.Message
+            });
+        }
+    }
+    [HttpGet("instructor-workload")]
+    public async Task<IActionResult> GetInstructorWorkload()
+    {
+        var result = await _reportService.GetInstructorWorkloadAsync();
+
+        return Ok(new ApiResponse<List<InstructorWorkloadResponse>>
+        {
+            Success = true,
+            Message = "Instructor workload retrieved successfully.",
+            Data = result
+        });
+    }
+
+    [HttpGet("students-without-payments")]
+    public async Task<IActionResult> GetStudentsWithoutPayments()
+    {
+        var result = await _reportService.GetStudentsWithoutPaymentsAsync();
+
+        return Ok(new ApiResponse<List<StudentWithoutPaymentResponse>>
+        {
+            Success = true,
+            Message = "Students without payments retrieved successfully.",
+            Data = result
+        });
+    }
 }
