@@ -78,7 +78,7 @@ public class TrainingTrackController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
+            return BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Message = ex.Message
@@ -113,7 +113,7 @@ public class TrainingTrackController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
+            return BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Message = ex.Message
@@ -145,7 +145,7 @@ public class TrainingTrackController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
+            return BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Message = ex.Message

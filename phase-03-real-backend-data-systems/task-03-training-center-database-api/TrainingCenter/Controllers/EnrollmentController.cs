@@ -103,7 +103,7 @@ public class EnrollmentsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
+            return BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Message = ex.Message
