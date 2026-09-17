@@ -122,10 +122,11 @@ namespace TrainingCenter.Services
             {
                 throw new InvalidOperationException("Training track is not active.");
             }
-            var duplicateEnrollment = await _context.Enrollments.AnyAsync(e =>e.StudentId == request.StudentId &&e.TrainingTrackId == request.TrainingTrackId);
+            var duplicateEnrollment = await _context.Enrollments.AnyAsync(e =>e.StudentId == request.StudentId &&e.TrainingTrackId == request.TrainingTrackId
+                && e.Status != "Cancelled");
             if (duplicateEnrollment) 
             {
-                throw new InvalidOperationException("Training track is full");
+                throw new InvalidOperationException("Student already has an active or pending enrollment in this track.");
             }
             //capacity el track elwahed
             var activeEnrollments = await _context.Enrollments.CountAsync(e => e.TrainingTrackId == request.TrainingTrackId && e.Status == "Active");
@@ -139,7 +140,7 @@ namespace TrainingCenter.Services
                 StudentId = request.StudentId,
                 TrainingTrackId = request.TrainingTrackId,
                 EnrollmentDate = DateTime.UtcNow,
-                Status = "Active",
+                Status = "Pending",
                 ProgressPercentage = 0,
                 CreatedAt = DateTime.UtcNow
             };
@@ -160,6 +161,7 @@ namespace TrainingCenter.Services
 
             var validStatuses = new[]
             {
+            "Pending",
             "Active",
             "Completed",
             "Cancelled" };
@@ -177,6 +179,11 @@ namespace TrainingCenter.Services
             if (enrollment.Status == "Cancelled" &&status == "Active")
             {
                 throw new InvalidOperationException("Cancelled enrollment cannot become active again.");
+            }
+            if (enrollment.Status == "Completed" &&status == "Cancelled")
+            {
+                throw new InvalidOperationException(
+                    "Completed enrollment cannot be cancelled.");
             }
             enrollment.Status = status;
             enrollment.UpdatedAt = DateTime.UtcNow;

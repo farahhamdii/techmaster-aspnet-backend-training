@@ -18,8 +18,8 @@ public class StudentController : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> GetAll(
-    string? search,
-    bool? isActive)
+        string? search,
+        bool? isActive)
     {
         var students = await _studentService.GetAllAsync(search, isActive);
 
@@ -31,11 +31,10 @@ public class StudentController : ControllerBase
         });
     }
 
-
     [HttpGet("paged")]
     public async Task<IActionResult> GetStudents(
-    int pageNumber = 1,
-    int pageSize = 10)
+        int pageNumber = 1,
+        int pageSize = 10)
     {
         try
         {
@@ -94,7 +93,7 @@ public class StudentController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
+            return BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Message = ex.Message
@@ -129,7 +128,7 @@ public class StudentController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
+            return BadRequest(new ApiResponse<object>
             {
                 Success = false,
                 Message = ex.Message

@@ -55,7 +55,7 @@ namespace TrainingCenter.Services
             if (pageSize <= 0 || pageSize > 100)
                 throw new ArgumentException("Page size must be between 1 and 100.");
 
-            var query = _context.Students
+            var query = _context.Students.Where(s => !s.IsDeleted)
                 .AsNoTracking();
 
             var totalCount = await query.CountAsync();
@@ -105,6 +105,10 @@ namespace TrainingCenter.Services
 
         public async Task<StudentListItemResponse> CreateAsync(CreateStudentRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new InvalidOperationException("Full name is required.");
+            }
             var emailExists = await _context.Students.AnyAsync(s => s.Email == request.Email && !s.IsDeleted);
             if (emailExists)
             {
@@ -130,6 +134,10 @@ namespace TrainingCenter.Services
 
         public async Task<StudentListItemResponse?> UpdateAsync(int id,UpdateStudentRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.FullName))
+            {
+                throw new InvalidOperationException("Full name is required.");
+            }
             var student = await _context.Students
                 .FirstOrDefaultAsync(s => s.StudentId == id && !s.IsDeleted);
 

@@ -94,6 +94,11 @@ public class TrainingTrackService : ITrainingTrackService
     public async Task<TrackDetailsResponse> CreateAsync(
     CreateTrackRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw new InvalidOperationException(
+                "Track title is required.");
+        }
         if (request.Capacity <= 0)
         {
             throw new InvalidOperationException(
@@ -151,6 +156,11 @@ public class TrainingTrackService : ITrainingTrackService
     int id,
     UpdateTrackRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw new InvalidOperationException(
+                "Track title is required.");
+        }
         var track = await _context.TrainingTracks
             .FirstOrDefaultAsync(t =>
                 t.TrainingTrackId == id &&
