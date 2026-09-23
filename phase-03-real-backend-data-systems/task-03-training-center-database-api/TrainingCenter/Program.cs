@@ -15,9 +15,12 @@ namespace TrainingCenter
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-            builder.Services.AddDbContext<TrainingCenterDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+          builder.Services.AddDbContext<TrainingCenterDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
+    sqlServerOptionsAction: sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure();
+    }));
             builder.Services.AddScoped<IStudentService, StudentService>();
             builder.Services.AddScoped<IInstructorService, InstructorService>();
             builder.Services.AddScoped<ITrainingTrackService, TrainingTrackService>();
@@ -31,11 +34,10 @@ namespace TrainingCenter
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
+      
                 app.UseSwagger();
                 app.UseSwaggerUI();
-            }
+          
 
             app.UseHttpsRedirection();
 

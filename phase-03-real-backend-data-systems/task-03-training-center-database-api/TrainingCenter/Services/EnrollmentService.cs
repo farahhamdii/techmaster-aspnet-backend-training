@@ -198,5 +198,103 @@ namespace TrainingCenter.Services
         {
             return await GetAllAsync(null, trackId, null,null);
         }
+        public async Task<PagedResult<EnrollmentDetailsResponse>> GetPagedAsync(string? status, int? trackId, int? studentId,
+    string? paymentStatus,
+    int pageNumber,
+    int pageSize)
+        {
+            var query = _context.Enrollments
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(e => e.Status == status);
+            }
+
+            if (trackId.HasValue)
+            {
+                query = query.Where(e => e.TrainingTrackId == trackId.Value);
+            }
+
+            if (studentId.HasValue)
+            {
+                query = query.Where(e => e.StudentId == studentId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(paymentStatus))
+            {
+                query = query.Where(e =>
+                    e.Payments.Any(p => p.PaymentStatus == paymentStatus));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(e => e.EnrollmentDate)
+                .Select(e => new EnrollmentDetailsResponse
+                {
+                    EnrollmentId = e.EnrollmentId,
+                    StudentId = e.StudentId,
+                    StudentName = e.Student.FullName,
+                    TrainingTrackId = e.TrainingTrackId,
+                    TrackTitle = e.TrainingTrack.Title,
+                    EnrollmentDate = e.EnrollmentDate,
+                    Status = e.Status,
+                    ProgressPercentage = e.ProgressPercentage,
+                    FinalResult = e.FinalResult,
+
+                    TotalPaid = e.Payments
+                        .Where(p => p.PaymentStatus == "Paid")
+                        .Sum(p => p.Amount),
+
+                    Payments = e.Payments
+                        .Select(p => new PaymentResponse
+                        {
+                            PaymentId = p.PaymentId,
+                            EnrollmentId = p.EnrollmentId,
+                            Amount = p.Amount,
+                            PaymentMethod = p.PaymentMethod,
+                            PaymentDate = p.PaymentDate,
+                            PaymentStatus = p.PaymentStatus,
+                            ReferenceNumber = p.ReferenceNumber,
+                            Notes = p.Notes
+                        })
+                        .ToList()
+                })
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResult<EnrollmentDetailsResponse>
+            {
+                Items = items,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(
+                    totalCount / (double)pageSize)
+            };
+        }
+
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            var enrollment = await _context.Enrollments
+                .FirstOrDefaultAsync(e => e.EnrollmentId == id);
+
+            if (enrollment == null)
+            {
+                return false;
+            }
+
+            enrollment.IsDeleted = true;
+            enrollment.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return true;
+
+        }
+
     }
 }
