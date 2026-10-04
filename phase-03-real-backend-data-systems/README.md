@@ -366,17 +366,17 @@ Final Demo
 
 ## Phase 03 Progress
 
-| Task                                           | Status      |
-| ---------------------------------------------- | ----------- |
-| Task 00 - Workspace & Environment Setup        | Completed   |
-| Task 01 - EF Core Modeling Drills              | Completed  |
-| Task 02 - Requirements to ERD                  | Completed |
-| Task 03 - Training Center Database API         | Planned     |
-| Task 04 - Querying, Filtering & Reporting      | Planned     |
-| Task 05 - Business Rules & Data Integrity      | Planned     |
-| Task 06 - Production Hosting & Remote Database | Planned     |
-| Task 07 - EF Core API Refactor Pack            | Planned     |
-| Task 08 - Interview & Demo Pack                | Planned     |
+| Task                                           | Status        |
+| ---------------------------------------------- | -----------   |
+| Task 00 - Workspace & Environment Setup        | Completed     |
+| Task 01 - EF Core Modeling Drills              | Completed     |
+| Task 02 - Requirements to ERD                  | Completed     |
+| Task 03 - Training Center Database API         | Completed     |
+| Task 04 - Querying, Filtering & Reporting      | Completed     |
+| Task 05 - Business Rules & Data Integrity      | Completed     |
+| Task 06 - Production Hosting & Remote Database | Completed     |
+| Task 07 - EF Core API Refactor Pack            | Completed     |
+| Task 08 - Interview & Demo Pack                | Completed     |
 
 ---
 
