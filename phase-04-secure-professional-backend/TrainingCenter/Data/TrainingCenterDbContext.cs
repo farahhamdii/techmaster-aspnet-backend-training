@@ -14,6 +14,8 @@ namespace TrainingCenter.Data
         public DbSet<TrainingTrack> TrainingTracks { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<ApplicationUser> Users { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -118,6 +120,18 @@ namespace TrainingCenter.Data
                     .HasForeignKey(p => p.EnrollmentId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
+
+            modelBuilder.Entity<ApplicationUser>().HasIndex(u => u.Email).IsUnique();
+            modelBuilder.Entity<RefreshToken>()
+    .HasIndex(r => r.TokenHash)
+    .IsUnique();
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(r => r.ApplicationUser)
+                .WithMany(u => u.RefreshTokens)
+                .HasForeignKey(r => r.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     
     }

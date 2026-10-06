@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TrainingCenter.Data;
 
@@ -11,9 +12,11 @@ using TrainingCenter.Data;
 namespace TrainingCenter.Migrations
 {
     [DbContext(typeof(TrainingCenterDbContext))]
-    partial class TrainingCenterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261006142935_AddRefreshToken")]
+    partial class AddRefreshToken
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TrainingCenter.Data;
 
@@ -11,9 +12,11 @@ using TrainingCenter.Data;
 namespace TrainingCenter.Migrations
 {
     [DbContext(typeof(TrainingCenterDbContext))]
-    partial class TrainingCenterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261006133812_AddApplicationUser")]
+    partial class AddApplicationUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -198,43 +201,6 @@ namespace TrainingCenter.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("TrainingCenter.Entities.RefreshToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ApplicationUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReplacedByTokenHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.ToTable("RefreshTokens");
-                });
-
             modelBuilder.Entity("TrainingCenter.Entities.Student", b =>
                 {
                     b.Property<int>("StudentId")
@@ -366,17 +332,6 @@ namespace TrainingCenter.Migrations
                     b.Navigation("Enrollment");
                 });
 
-            modelBuilder.Entity("TrainingCenter.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("TrainingCenter.Entities.ApplicationUser", "ApplicationUser")
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ApplicationUser");
-                });
-
             modelBuilder.Entity("TrainingCenter.Entities.TrainingTrack", b =>
                 {
                     b.HasOne("TrainingCenter.Entities.Instructor", "Instructor")
@@ -386,11 +341,6 @@ namespace TrainingCenter.Migrations
                         .IsRequired();
 
                     b.Navigation("Instructor");
-                });
-
-            modelBuilder.Entity("TrainingCenter.Entities.ApplicationUser", b =>
-                {
-                    b.Navigation("RefreshTokens");
                 });
 
             modelBuilder.Entity("TrainingCenter.Entities.Enrollment", b =>
