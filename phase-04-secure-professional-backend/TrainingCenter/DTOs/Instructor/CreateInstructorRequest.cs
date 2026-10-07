@@ -1,4 +1,5 @@
-﻿namespace TrainingCenter.DTOs;
+﻿
+namespace TrainingCenter.DTOs.Instructor;
 
 public class CreateInstructorRequest
 {
@@ -9,4 +10,6 @@ public class CreateInstructorRequest
     public string Specialization { get; set; } = string.Empty;
 
     public string? Bio { get; set; }
+
+    public string Password { get; set; } = string.Empty;
 }

@@ -8,7 +8,8 @@ public interface IPaymentService
     Task<PaymentResponse> CreateAsync(CreatePaymentRequest request);
     Task<PaymentResponse?> UpdateStatusAsync( int id,string status);
     Task<List<PaymentResponse>> GetEnrollmentPaymentsAsync(int enrollmentId);
+    Task<int?> GetEnrollmentStudentIdAsync(int enrollmentId);
 
 
- 
+
 }

@@ -8,5 +8,6 @@ public interface ITrainingTrackService
     Task<TrackDetailsResponse?> GetByIdAsync(int id);
     Task<TrackDetailsResponse> CreateAsync( CreateTrackRequest request);
     Task<TrackDetailsResponse?> UpdateAsync(int id, UpdateTrackRequest request);
+    Task<List<TrackListItemResponse>> GetAvailableAsync();
     Task<bool> DeleteAsync(int id);
 }

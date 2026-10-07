@@ -173,6 +173,13 @@ public class PaymentService : IPaymentService
             })
             .ToListAsync();
     }
+    public async Task<int?> GetEnrollmentStudentIdAsync(int enrollmentId)
+    {
+        return await _context.Enrollments
+            .Where(e => e.EnrollmentId == enrollmentId)
+            .Select(e => (int?)e.StudentId)
+            .FirstOrDefaultAsync();
+    }
 }
 
 

@@ -182,8 +182,7 @@ namespace TrainingCenter.Services
             }
             if (enrollment.Status == "Completed" &&status == "Cancelled")
             {
-                throw new InvalidOperationException(
-                    "Completed enrollment cannot be cancelled.");
+                throw new InvalidOperationException("Completed enrollment cannot be cancelled.");
             }
             enrollment.Status = status;
             enrollment.UpdatedAt = DateTime.UtcNow;
@@ -198,14 +197,11 @@ namespace TrainingCenter.Services
         {
             return await GetAllAsync(null, trackId, null,null);
         }
-        public async Task<PagedResult<EnrollmentDetailsResponse>> GetPagedAsync(string? status, int? trackId, int? studentId,
-    string? paymentStatus,
+        public async Task<PagedResult<EnrollmentDetailsResponse>> GetPagedAsync(string? status, int? trackId, int? studentId,string? paymentStatus,
     int pageNumber,
     int pageSize)
         {
-            var query = _context.Enrollments
-                .AsNoTracking()
-                .AsQueryable();
+            var query = _context.Enrollments.AsNoTracking() .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(status))
             {
@@ -224,8 +220,7 @@ namespace TrainingCenter.Services
 
             if (!string.IsNullOrWhiteSpace(paymentStatus))
             {
-                query = query.Where(e =>
-                    e.Payments.Any(p => p.PaymentStatus == paymentStatus));
+                query = query.Where(e => e.Payments.Any(p => p.PaymentStatus == paymentStatus));
             }
 
             var totalCount = await query.CountAsync();
@@ -272,15 +267,13 @@ namespace TrainingCenter.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 TotalCount = totalCount,
-                TotalPages = (int)Math.Ceiling(
-                    totalCount / (double)pageSize)
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
             };
         }
 
         public async Task<bool> SoftDeleteAsync(int id)
         {
-            var enrollment = await _context.Enrollments
-                .FirstOrDefaultAsync(e => e.EnrollmentId == id);
+            var enrollment = await _context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentId == id);
 
             if (enrollment == null)
             {
@@ -289,11 +282,16 @@ namespace TrainingCenter.Services
 
             enrollment.IsDeleted = true;
             enrollment.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
 
             return true;
 
+        }
+        public async Task<int?> GetTrackInstructorIdAsync(int trackId)
+        {
+            return await _context.TrainingTracks .Where(t => t.TrainingTrackId == trackId && !t.IsDeleted)
+                .Select(t => (int?)t.InstructorId)
+                .FirstOrDefaultAsync();
         }
 
     }

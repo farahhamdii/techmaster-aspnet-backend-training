@@ -11,7 +11,7 @@ public interface IEnrollmentService
     Task<EnrollmentDetailsResponse?> UpdateStatusAsync(int id, string status);
     Task<List<EnrollmentDetailsResponse>> GetStudentEnrollmentsAsync(int studentId);
     Task<List<EnrollmentDetailsResponse>> GetTrackStudentsAsync( int trackId);
-
+    Task<int?> GetTrackInstructorIdAsync(int trackId);
     Task<PagedResult<EnrollmentDetailsResponse>> GetPagedAsync(string? status,int? trackId,int? studentId,string? paymentStatus,int pageNumber,int pageSize);
 
     Task<bool> SoftDeleteAsync(int id);

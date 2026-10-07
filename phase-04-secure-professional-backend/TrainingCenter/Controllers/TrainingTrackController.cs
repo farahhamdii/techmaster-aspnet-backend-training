@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TrainingCenter.Common;
 using TrainingCenter.DTOs;
 using TrainingCenter.Services;
@@ -7,6 +9,7 @@ namespace TrainingCenter.Api.Controllers;
 
 [ApiController]
 [Route("api/tracks")]
+[Authorize]
 public class TrainingTrackController : ControllerBase
 {
     private readonly ITrainingTrackService _trackService;
@@ -17,18 +20,11 @@ public class TrainingTrackController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(
-        string? keyword,
-        string? level,
-        string? status,
+    [Authorize(Roles = "Admin,Instructor,Student")]
+    public async Task<IActionResult> GetAll( string? keyword,string? level,string? status,
         int? instructorId)
     {
-        var tracks = await _trackService.GetAllAsync(
-            keyword,
-            level,
-            status,
-            instructorId);
-
+        var tracks = await _trackService.GetAllAsync( keyword, level,status,instructorId);
         return Ok(new ApiResponse<List<TrackListItemResponse>>
         {
             Success = true,
@@ -37,11 +33,26 @@ public class TrainingTrackController : ControllerBase
         });
     }
 
-    [HttpGet("{id}")]
+[HttpGet("/api/tracks/available")]
+[Authorize(Roles = "Student")]
+public async Task<IActionResult> GetAvailableTracks()
+    {
+        var tracks = await _trackService.GetAvailableAsync();
+
+        return Ok(new ApiResponse<List<TrackListItemResponse>>
+        {
+            Success = true,
+            Message = "Available tracks retrieved successfully.",
+            Data = tracks
+        });
+    }
+
+
+    [HttpGet("{id:int}")]
+    [Authorize(Roles = "Admin,Instructor,Student")]
     public async Task<IActionResult> GetById(int id)
     {
         var track = await _trackService.GetByIdAsync(id);
-
         if (track == null)
         {
             return NotFound(new ApiResponse<object>
@@ -60,12 +71,12 @@ public class TrainingTrackController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(CreateTrackRequest request)
     {
         try
         {
             var track = await _trackService.CreateAsync(request);
-
             return CreatedAtAction(
                 nameof(GetById),
                 new { id = track.TrainingTrackId },
@@ -86,15 +97,13 @@ public class TrainingTrackController : ControllerBase
         }
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(
-        int id,
-        UpdateTrackRequest request)
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(int id,UpdateTrackRequest request)
     {
         try
         {
             var track = await _trackService.UpdateAsync(id, request);
-
             if (track == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -121,13 +130,13 @@ public class TrainingTrackController : ControllerBase
         }
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         try
         {
             var deleted = await _trackService.DeleteAsync(id);
-
             if (!deleted)
             {
                 return NotFound(new ApiResponse<object>
@@ -152,6 +161,4 @@ public class TrainingTrackController : ControllerBase
             });
         }
     }
-
-
 }

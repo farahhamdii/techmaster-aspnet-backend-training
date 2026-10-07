@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TrainingCenter.Common;
 using TrainingCenter.DTOs;
@@ -8,22 +9,26 @@ namespace TrainingCenter.Controllers;
 
 [ApiController]
 [Route("api/enrollments")]
+[Authorize]
 public class EnrollmentsController : ControllerBase
 {
     private readonly IEnrollmentService _enrollmentService;
 
-    public EnrollmentsController(IEnrollmentService enrollmentService)
+    public EnrollmentsController(
+        IEnrollmentService enrollmentService)
     {
         _enrollmentService = enrollmentService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(string? status,int? trackId,int? studentId,
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAll(
+        string? status,
+        int? trackId,
+        int? studentId,
         string? paymentStatus)
     {
-        var enrollments = await _enrollmentService.GetAllAsync( status,trackId,studentId,
-            paymentStatus);
-
+        var enrollments = await _enrollmentService.GetAllAsync(status, trackId, studentId,paymentStatus);
         return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
         {
             Success = true,
@@ -33,9 +38,11 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetById(int id)
     {
         var enrollment = await _enrollmentService.GetByIdAsync(id);
+
         if (enrollment == null)
         {
             return NotFound(new ApiResponse<object>
@@ -54,11 +61,13 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(CreateEnrollmentRequest request)
     {
         try
         {
             var enrollment =await _enrollmentService.CreateAsync(request);
+
             return CreatedAtAction(
                 nameof(GetById),
                 new { id = enrollment.EnrollmentId },
@@ -80,11 +89,12 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpPut("{id}/status")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateStatus(int id,string status)
     {
         try
         {
-            var enrollment = await _enrollmentService.UpdateStatusAsync(id,status);
+            var enrollment = await _enrollmentService.UpdateStatusAsync( id,status);
             if (enrollment == null)
             {
                 return NotFound(new ApiResponse<object>
@@ -112,9 +122,24 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpGet("/api/students/{id}/enrollments")]
+    [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> GetStudentEnrollments(int id)
     {
-        var enrollments =await _enrollmentService.GetStudentEnrollmentsAsync(id);
+        if (User.IsInRole("Student"))
+        {
+            var studentIdClaim =User.FindFirst("StudentId")?.Value;
+            if (!int.TryParse(studentIdClaim, out var studentId))
+            {
+                return Unauthorized();
+            }
+
+            if (studentId != id)
+            {
+                return Forbid();
+            }
+        }
+
+        var enrollments = await _enrollmentService.GetStudentEnrollmentsAsync(id);
         return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
         {
             Success = true,
@@ -124,9 +149,35 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpGet("/api/tracks/{id}/students")]
+    [Authorize(Roles = "Admin,Instructor")]
     public async Task<IActionResult> GetTrackStudents(int id)
     {
-        var enrollments = await _enrollmentService.GetTrackStudentsAsync(id);
+        if (User.IsInRole("Instructor"))
+        {
+            var instructorIdClaim =User.FindFirst("InstructorId")?.Value;
+
+            if (!int.TryParse(instructorIdClaim, out var instructorId))
+            {
+                return Unauthorized();
+            }
+            var trackInstructorId =await _enrollmentService.GetTrackInstructorIdAsync(id);
+            if (trackInstructorId == null)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Training track not found."
+                });
+            }
+
+            if (trackInstructorId != instructorId)
+            {
+                return Forbid();
+            }
+        }
+
+        var enrollments =await _enrollmentService.GetTrackStudentsAsync(id);
+
         return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
         {
             Success = true,
@@ -134,5 +185,26 @@ public class EnrollmentsController : ControllerBase
             Data = enrollments
         });
     }
-}
 
+[HttpGet("/api/student/my-enrollments")]
+[Authorize(Roles = "Student")]
+public async Task<IActionResult> GetMyEnrollments()
+    {
+        var studentIdClaim = User.FindFirst("StudentId")?.Value;
+
+        if (!int.TryParse(studentIdClaim, out var studentId))
+        {
+            return Unauthorized();
+        }
+
+        var enrollments = await _enrollmentService.GetStudentEnrollmentsAsync(studentId);
+        return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
+        {
+            Success = true,
+            Message = "My enrollments retrieved successfully.",
+            Data = enrollments
+        });
+    }
+
+
+}

@@ -1,20 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using TrainingCenter.Data;
 using TrainingCenter.DTOs;
 using TrainingCenter.DTOs.Instructor;
 using TrainingCenter.Entities;
-using TrainingCenter.Services;
 
 namespace TrainingCenter.Services
 {
     public class InstructorService : IInstructorService
     {
         private readonly TrainingCenterDbContext _context;
-        public InstructorService(TrainingCenterDbContext context)
+        private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
 
+        public InstructorService(
+            TrainingCenterDbContext context,
+            IPasswordHasher<ApplicationUser> passwordHasher)
         {
-            _context = context; 
-            
+            _context = context;
+            _passwordHasher = passwordHasher;
         }
 
         public async Task<List<InstructorListItemResponse>> GetAllAsync()
@@ -27,13 +31,13 @@ namespace TrainingCenter.Services
                     Email = i.Email,
                     Specialization = i.Specialization,
                     IsActive = i.IsActive,
-                }).ToListAsync();
+                })
+                .ToListAsync();
         }
 
-        public async Task<InstructorDetailsResponse?>GetByIdAsync(int id )
+        public async Task<InstructorDetailsResponse?> GetByIdAsync(int id)
         {
-            return await _context.Instructors
-                .Where(i => i.InstructorId == id)
+            return await _context.Instructors.Where(i => i.InstructorId == id)
                 .Select(i => new InstructorDetailsResponse
                 {
                     InstructorId = i.InstructorId,
@@ -47,40 +51,67 @@ namespace TrainingCenter.Services
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<InstructorListItemResponse>CreateAsync(CreateInstructorRequest request)
+        public async Task<InstructorListItemResponse> CreateAsync(CreateInstructorRequest request)
         {
-            var emailExists =await _context.Instructors
-                .AnyAsync(i=>i.Email== request.Email);
-            if (emailExists) 
+            var emailExists = await _context.Instructors
+                .AnyAsync(i => i.Email.ToLower() == request.Email.ToLower());
+
+            var userEmailExists = await _context.Users
+                .AnyAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+            if (emailExists || userEmailExists)
             {
-                throw new InvalidOperationException("email already exists");
+                throw new InvalidOperationException("Email already exists.");
             }
+
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                throw new InvalidOperationException("Password is required.");
+            }
+
             var instructor = new Instructor
             {
                 FullName = request.FullName,
                 Email = request.Email,
                 Specialization = request.Specialization,
                 Bio = request.Bio
-
             };
-            _context.Add(instructor);
+
+            _context.Instructors.Add(instructor);
+
             await _context.SaveChangesAsync();
+
+            var user = new ApplicationUser
+            {
+                FullName = instructor.FullName,
+                Email = instructor.Email,
+                Role = UserRole.Instructor,
+                IsActive = instructor.IsActive,
+                CreatedAt = DateTime.UtcNow,
+                InstructorId = instructor.InstructorId
+            };
+
+            user.PasswordHash = _passwordHasher.HashPassword(
+                user,
+                request.Password);
+
+            _context.Users.Add(user);
+
+            await _context.SaveChangesAsync();
+
             return new InstructorListItemResponse
             {
                 InstructorId = instructor.InstructorId,
                 FullName = instructor.FullName,
                 Email = instructor.Email,
                 Specialization = instructor.Specialization,
-                IsActive = instructor.IsActive,
+                IsActive = instructor.IsActive
             };
-
         }
-        public async Task<InstructorListItemResponse?> UpdateAsync(
-        int id,
-        UpdateInstructorRequest request)
+
+        public async Task<InstructorListItemResponse?> UpdateAsync(int id,UpdateInstructorRequest request)
         {
-            var instructor = await _context.Instructors
-                .FirstOrDefaultAsync(i => i.InstructorId == id);
+            var instructor = await _context.Instructors.FirstOrDefaultAsync(i => i.InstructorId == id);
 
             if (instructor == null)
             {
@@ -88,9 +119,7 @@ namespace TrainingCenter.Services
             }
 
             var emailExists = await _context.Instructors
-                .AnyAsync(i =>
-                    i.Email == request.Email &&
-                    i.InstructorId != id);
+                .AnyAsync(i => i.Email.ToLower() == request.Email.ToLower() &&i.InstructorId != id);
 
             if (emailExists)
             {
@@ -114,6 +143,7 @@ namespace TrainingCenter.Services
                 IsActive = instructor.IsActive
             };
         }
+
         public async Task<List<TrainingTrackListItemResponse>> GetTracksAsync(int id)
         {
             return await _context.TrainingTracks
@@ -131,6 +161,5 @@ namespace TrainingCenter.Services
                 })
                 .ToListAsync();
         }
-
     }
 }

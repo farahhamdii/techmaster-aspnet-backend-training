@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -40,9 +41,19 @@ namespace TrainingCenter.Services
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
-            var key = new SymmetricSecurityKey( Encoding.UTF8.GetBytes(jwtKey));
+            if (user.StudentId.HasValue)
+            {
+                claims.Add(new Claim("StudentId", user.StudentId.Value.ToString()));
+            }
 
-            var credentials = new SigningCredentials(key,SecurityAlgorithms.HmacSha256);
+            if (user.InstructorId.HasValue)
+            {
+                claims.Add(new Claim("InstructorId", user.InstructorId.Value.ToString()));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+
+            var credentials = new SigningCredentials( key,SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
@@ -50,8 +61,7 @@ namespace TrainingCenter.Services
                 expires: expiresAt,
                 signingCredentials: credentials);
 
-            var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
-
+            var accessToken =new JwtSecurityTokenHandler().WriteToken(token);
             return (accessToken, expiresAt);
         }
     }
