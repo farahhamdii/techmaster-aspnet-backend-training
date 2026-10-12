@@ -19,35 +19,29 @@ public class StudentController : ControllerBase
     {
         _studentService = studentService;
     }
-[HttpGet("/api/student/me")]
-[Authorize(Roles = "Student")]
-public async Task<IActionResult> GetMyProfile()
+
+    // Student only: Get own profile
+    [HttpGet("/api/student/me")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetMyProfile()
     {
         var studentIdClaim = User.FindFirst("StudentId")?.Value;
+
         if (!int.TryParse(studentIdClaim, out var studentId))
         {
             return Unauthorized();
         }
+
         var student = await _studentService.GetByIdAsync(studentId);
+
         if (student == null)
         {
-            return NotFound(new ApiResponse<StudentDetailsResponse>
-            {
-                Success = false,
-                Message = "Student profile not found.",
-                Data = null
-            });
+            return NotFound(ApiResponse<StudentDetailsResponse>.ErrorResponse( "Student profile not found."));
         }
 
-        return Ok(new ApiResponse<StudentDetailsResponse>
-        {
-            Success = true,
-            Message = "Student profile retrieved successfully.",
-            Data = student
-        });
+        return Ok(ApiResponse<StudentDetailsResponse>.SuccessResponse(
+                student,"Student profile retrieved successfully."));
     }
-
-
 
     // Admin only
     [HttpGet]
@@ -55,12 +49,8 @@ public async Task<IActionResult> GetMyProfile()
     public async Task<IActionResult> GetAll(string? search, bool? isActive)
     {
         var students = await _studentService.GetAllAsync(search, isActive);
-        return Ok(new ApiResponse<List<StudentListItemResponse>>
-        {
-            Success = true,
-            Message = "Students retrieved successfully.",
-            Data = students
-        });
+        return Ok(ApiResponse<List<StudentListItemResponse>>.SuccessResponse(
+                students,"Students retrieved successfully."));
     }
 
     // Admin only
@@ -70,20 +60,17 @@ public async Task<IActionResult> GetMyProfile()
     {
         try
         {
-            var result = await _studentService .GetPagedStudentsAsync(pageNumber, pageSize);
+            var result = await _studentService.GetPagedStudentsAsync(pageNumber,pageSize);
             return Ok(result);
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
-    // Admin → can view any student
-    // Student → can view own profile only
+    // Admin can view any student.
+    // Student can view own profile only.
     [HttpGet("{id}")]
     [Authorize(Roles = "Admin,Student")]
     public async Task<IActionResult> GetById(int id)
@@ -91,12 +78,10 @@ public async Task<IActionResult> GetMyProfile()
         if (User.IsInRole("Student"))
         {
             var studentIdClaim = User.FindFirstValue("StudentId");
-
             if (!int.TryParse(studentIdClaim, out var currentStudentId))
             {
                 return Unauthorized();
             }
-
             if (currentStudentId != id)
             {
                 return Forbid();
@@ -104,22 +89,13 @@ public async Task<IActionResult> GetMyProfile()
         }
 
         var student = await _studentService.GetByIdAsync(id);
-
         if (student == null)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = "Student not found."
-            });
+            return NotFound(ApiResponse<object>.ErrorResponse( "Student not found."));
         }
 
-        return Ok(new ApiResponse<StudentDetailsResponse>
-        {
-            Success = true,
-            Message = "Student retrieved successfully.",
-            Data = student
-        });
+        return Ok(ApiResponse<StudentDetailsResponse>.SuccessResponse(
+                student,"Student retrieved successfully."));
     }
 
     // Admin only
@@ -132,20 +108,11 @@ public async Task<IActionResult> GetMyProfile()
             var student = await _studentService.CreateAsync(request);
             return CreatedAtAction(nameof(GetById),
                 new { id = student.StudentId },
-                new ApiResponse<StudentListItemResponse>
-                {
-                    Success = true,
-                    Message = "Student created successfully.",
-                    Data = student
-                });
+                ApiResponse<StudentListItemResponse>.SuccessResponse(student, "Student created successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -157,30 +124,17 @@ public async Task<IActionResult> GetMyProfile()
         try
         {
             var student = await _studentService.UpdateAsync(id, request);
-
             if (student == null)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Student not found."
-                });
+                return NotFound(ApiResponse<object>.ErrorResponse("Student not found."));
             }
 
-            return Ok(new ApiResponse<StudentListItemResponse>
-            {
-                Success = true,
-                Message = "Student updated successfully.",
-                Data = student
-            });
+            return Ok(ApiResponse<StudentListItemResponse>.SuccessResponse(
+                    student,"Student updated successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -192,17 +146,9 @@ public async Task<IActionResult> GetMyProfile()
         var deleted = await _studentService.DeleteAsync(id);
         if (!deleted)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = "Student not found."
-            });
+            return NotFound(ApiResponse<object>.ErrorResponse("Student not found."));
         }
 
-        return Ok(new ApiResponse<object>
-        {
-            Success = true,
-            Message = "Student deleted successfully."
-        });
+        return Ok(ApiResponse<object>.SuccessResponse( null, "Student deleted successfully."));
     }
 }

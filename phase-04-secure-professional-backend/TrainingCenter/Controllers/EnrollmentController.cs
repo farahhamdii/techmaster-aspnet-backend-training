@@ -14,8 +14,7 @@ public class EnrollmentsController : ControllerBase
 {
     private readonly IEnrollmentService _enrollmentService;
 
-    public EnrollmentsController(
-        IEnrollmentService enrollmentService)
+    public EnrollmentsController(IEnrollmentService enrollmentService)
     {
         _enrollmentService = enrollmentService;
     }
@@ -28,13 +27,15 @@ public class EnrollmentsController : ControllerBase
         int? studentId,
         string? paymentStatus)
     {
-        var enrollments = await _enrollmentService.GetAllAsync(status, trackId, studentId,paymentStatus);
-        return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
-        {
-            Success = true,
-            Message = "Enrollments retrieved successfully.",
-            Data = enrollments
-        });
+        var enrollments = await _enrollmentService.GetAllAsync(
+            status,
+            trackId,
+            studentId,
+            paymentStatus);
+
+        return Ok(
+            ApiResponse<List<EnrollmentDetailsResponse>>.SuccessResponse(
+                enrollments,"Enrollments retrieved successfully."));
     }
 
     [HttpGet("{id}")]
@@ -45,19 +46,10 @@ public class EnrollmentsController : ControllerBase
 
         if (enrollment == null)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = "Enrollment not found."
-            });
+            return NotFound(ApiResponse<object>.ErrorResponse("Enrollment not found."));
         }
 
-        return Ok(new ApiResponse<EnrollmentDetailsResponse>
-        {
-            Success = true,
-            Message = "Enrollment retrieved successfully.",
-            Data = enrollment
-        });
+        return Ok(ApiResponse<EnrollmentDetailsResponse>.SuccessResponse(enrollment,"Enrollment retrieved successfully."));
     }
 
     [HttpPost]
@@ -66,25 +58,16 @@ public class EnrollmentsController : ControllerBase
     {
         try
         {
-            var enrollment =await _enrollmentService.CreateAsync(request);
+            var enrollment = await _enrollmentService.CreateAsync(request);
 
             return CreatedAtAction(
                 nameof(GetById),
                 new { id = enrollment.EnrollmentId },
-                new ApiResponse<EnrollmentDetailsResponse>
-                {
-                    Success = true,
-                    Message = "Enrollment created successfully.",
-                    Data = enrollment
-                });
+                ApiResponse<EnrollmentDetailsResponse>.SuccessResponse(enrollment,"Enrollment created successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return Conflict(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -94,30 +77,18 @@ public class EnrollmentsController : ControllerBase
     {
         try
         {
-            var enrollment = await _enrollmentService.UpdateStatusAsync( id,status);
+            var enrollment = await _enrollmentService.UpdateStatusAsync(id,status);
             if (enrollment == null)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Enrollment not found."
-                });
+                return NotFound(ApiResponse<object>.ErrorResponse("Enrollment not found."));
             }
 
-            return Ok(new ApiResponse<EnrollmentDetailsResponse>
-            {
-                Success = true,
-                Message = "Enrollment status updated successfully.",
-                Data = enrollment
-            });
+            return Ok(ApiResponse<EnrollmentDetailsResponse>.SuccessResponse(
+                    enrollment,"Enrollment status updated successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -127,7 +98,8 @@ public class EnrollmentsController : ControllerBase
     {
         if (User.IsInRole("Student"))
         {
-            var studentIdClaim =User.FindFirst("StudentId")?.Value;
+            var studentIdClaim = User.FindFirst("StudentId")?.Value;
+
             if (!int.TryParse(studentIdClaim, out var studentId))
             {
                 return Unauthorized();
@@ -139,13 +111,10 @@ public class EnrollmentsController : ControllerBase
             }
         }
 
-        var enrollments = await _enrollmentService.GetStudentEnrollmentsAsync(id);
-        return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
-        {
-            Success = true,
-            Message = "Student enrollments retrieved successfully.",
-            Data = enrollments
-        });
+        var enrollments =
+            await _enrollmentService.GetStudentEnrollmentsAsync(id);
+
+        return Ok(ApiResponse<List<EnrollmentDetailsResponse>>.SuccessResponse(enrollments,"Student enrollments retrieved successfully."));
     }
 
     [HttpGet("/api/tracks/{id}/students")]
@@ -155,19 +124,16 @@ public class EnrollmentsController : ControllerBase
         if (User.IsInRole("Instructor"))
         {
             var instructorIdClaim =User.FindFirst("InstructorId")?.Value;
-
             if (!int.TryParse(instructorIdClaim, out var instructorId))
             {
                 return Unauthorized();
             }
-            var trackInstructorId =await _enrollmentService.GetTrackInstructorIdAsync(id);
+
+            var trackInstructorId = await _enrollmentService.GetTrackInstructorIdAsync(id);
+
             if (trackInstructorId == null)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Training track not found."
-                });
+                return NotFound(ApiResponse<object>.ErrorResponse("Training track not found."));
             }
 
             if (trackInstructorId != instructorId)
@@ -178,17 +144,12 @@ public class EnrollmentsController : ControllerBase
 
         var enrollments =await _enrollmentService.GetTrackStudentsAsync(id);
 
-        return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
-        {
-            Success = true,
-            Message = "Track students retrieved successfully.",
-            Data = enrollments
-        });
+        return Ok(ApiResponse<List<EnrollmentDetailsResponse>>.SuccessResponse(enrollments,"Track students retrieved successfully."));
     }
 
-[HttpGet("/api/student/my-enrollments")]
-[Authorize(Roles = "Student")]
-public async Task<IActionResult> GetMyEnrollments()
+    [HttpGet("/api/student/my-enrollments")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetMyEnrollments()
     {
         var studentIdClaim = User.FindFirst("StudentId")?.Value;
 
@@ -198,13 +159,8 @@ public async Task<IActionResult> GetMyEnrollments()
         }
 
         var enrollments = await _enrollmentService.GetStudentEnrollmentsAsync(studentId);
-        return Ok(new ApiResponse<List<EnrollmentDetailsResponse>>
-        {
-            Success = true,
-            Message = "My enrollments retrieved successfully.",
-            Data = enrollments
-        });
+
+        return Ok(ApiResponse<List<EnrollmentDetailsResponse>>.SuccessResponse(
+                enrollments,"My enrollments retrieved successfully."));
     }
-
-
 }

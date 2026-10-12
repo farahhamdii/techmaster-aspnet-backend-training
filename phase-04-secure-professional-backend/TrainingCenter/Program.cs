@@ -7,7 +7,7 @@ using System.Text;
 using TrainingCenter.Data;
 using TrainingCenter.Entities;
 using TrainingCenter.Services;
-
+using TrainingCenter.Middleware;
 namespace TrainingCenter
 {
     public class Program
@@ -105,7 +105,7 @@ namespace TrainingCenter
             });
 
             var app = builder.Build();
-
+            app.UseMiddleware<GlobalExceptionMiddleware>();
             // Seed default Admin account
             using (var scope = app.Services.CreateScope())
             {

@@ -26,15 +26,14 @@ public class PaymentsController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetAll( DateTime? from,DateTime? to, string? status)
+    public async Task<IActionResult> GetAll(
+        DateTime? from,
+        DateTime? to,
+        string? status)
     {
-        var payments = await _paymentService.GetAllAsync(from,to,status);
-        return Ok(new ApiResponse<List<PaymentResponse>>
-        {
-            Success = true,
-            Message = "Payments retrieved successfully.",
-            Data = payments
-        });
+        var payments = await _paymentService.GetAllAsync(from, to, status);
+
+        return Ok( ApiResponse<List<PaymentResponse>>.SuccessResponse( payments,"Payments retrieved successfully."));
     }
 
     [HttpGet("{id}")]
@@ -42,21 +41,13 @@ public class PaymentsController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var payment = await _paymentService.GetByIdAsync(id);
+
         if (payment == null)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = "Payment not found."
-            });
+            return NotFound( ApiResponse<object>.ErrorResponse("Payment not found."));
         }
 
-        return Ok(new ApiResponse<PaymentResponse>
-        {
-            Success = true,
-            Message = "Payment retrieved successfully.",
-            Data = payment
-        });
+        return Ok(ApiResponse<PaymentResponse>.SuccessResponse(payment,"Payment retrieved successfully."));
     }
 
     [HttpPost]
@@ -66,23 +57,14 @@ public class PaymentsController : ControllerBase
         try
         {
             var payment = await _paymentService.CreateAsync(request);
-            return CreatedAtAction(
-                nameof(GetById),
+
+            return CreatedAtAction(nameof(GetById),
                 new { id = payment.PaymentId },
-                new ApiResponse<PaymentResponse>
-                {
-                    Success = true,
-                    Message = "Payment created successfully.",
-                    Data = payment
-                });
+                ApiResponse<PaymentResponse>.SuccessResponse(payment,"Payment created successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -92,30 +74,18 @@ public class PaymentsController : ControllerBase
     {
         try
         {
-            var payment = await _paymentService.UpdateStatusAsync(id,status);
+            var payment = await _paymentService.UpdateStatusAsync(id, status);
+
             if (payment == null)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Payment not found."
-                });
+                return NotFound( ApiResponse<object>.ErrorResponse("Payment not found."));
             }
 
-            return Ok(new ApiResponse<PaymentResponse>
-            {
-                Success = true,
-                Message = "Payment status updated successfully.",
-                Data = payment
-            });
+            return Ok( ApiResponse<PaymentResponse>.SuccessResponse( payment,"Payment status updated successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -132,41 +102,25 @@ public class PaymentsController : ControllerBase
                 {
                     return Unauthorized();
                 }
-
                 var enrollmentStudentId =await _paymentService.GetEnrollmentStudentIdAsync(id);
-
                 if (enrollmentStudentId == null)
                 {
-                    return NotFound(new ApiResponse<object>
-                    {
-                        Success = false,
-                        Message = "Enrollment not found."
-                    });
+                    return NotFound(ApiResponse<object>.ErrorResponse("Enrollment not found."));
                 }
-
                 if (enrollmentStudentId != studentId)
                 {
                     return Forbid();
                 }
             }
 
-            var payments =
-                await _paymentService.GetEnrollmentPaymentsAsync(id);
+            var payments =await _paymentService.GetEnrollmentPaymentsAsync(id);
 
-            return Ok(new ApiResponse<List<PaymentResponse>>
-            {
-                Success = true,
-                Message = "Enrollment payments retrieved successfully.",
-                Data = payments
-            });
+            return Ok( ApiResponse<List<PaymentResponse>>.SuccessResponse(
+                    payments,"Enrollment payments retrieved successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return NotFound(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -181,18 +135,12 @@ public class PaymentsController : ControllerBase
         }
         var enrollments =await _enrollmentService.GetStudentEnrollmentsAsync(studentId);
         var payments = new List<PaymentResponse>();
-
         foreach (var enrollment in enrollments)
         {
-            var enrollmentPayments = await _paymentService.GetEnrollmentPaymentsAsync(enrollment.EnrollmentId);
+            var enrollmentPayments =await _paymentService.GetEnrollmentPaymentsAsync(enrollment.EnrollmentId);
             payments.AddRange(enrollmentPayments);
         }
 
-        return Ok(new ApiResponse<List<PaymentResponse>>
-        {
-            Success = true,
-            Message = "My payments retrieved successfully.",
-            Data = payments
-        });
+        return Ok(ApiResponse<List<PaymentResponse>>.SuccessResponse(payments,"My payments retrieved successfully."));
     }
 }

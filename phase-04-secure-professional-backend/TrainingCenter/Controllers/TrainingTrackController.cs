@@ -13,41 +13,35 @@ namespace TrainingCenter.Api.Controllers;
 public class TrainingTrackController : ControllerBase
 {
     private readonly ITrainingTrackService _trackService;
-
     public TrainingTrackController(ITrainingTrackService trackService)
     {
         _trackService = trackService;
     }
 
+    // Admin, Instructor, Student
     [HttpGet]
     [Authorize(Roles = "Admin,Instructor,Student")]
-    public async Task<IActionResult> GetAll( string? keyword,string? level,string? status,
+    public async Task<IActionResult> GetAll(string? keyword,string? level,
+        string? status,
         int? instructorId)
     {
-        var tracks = await _trackService.GetAllAsync( keyword, level,status,instructorId);
-        return Ok(new ApiResponse<List<TrackListItemResponse>>
-        {
-            Success = true,
-            Message = "Tracks retrieved successfully.",
-            Data = tracks
-        });
+        var tracks = await _trackService.GetAllAsync(keyword,level,
+            status,
+            instructorId);
+
+        return Ok(ApiResponse<List<TrackListItemResponse>>.SuccessResponse(tracks,"Tracks retrieved successfully."));
     }
 
-[HttpGet("/api/tracks/available")]
-[Authorize(Roles = "Student")]
-public async Task<IActionResult> GetAvailableTracks()
+    // Student only
+    [HttpGet("/api/tracks/available")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetAvailableTracks()
     {
         var tracks = await _trackService.GetAvailableAsync();
-
-        return Ok(new ApiResponse<List<TrackListItemResponse>>
-        {
-            Success = true,
-            Message = "Available tracks retrieved successfully.",
-            Data = tracks
-        });
+        return Ok(ApiResponse<List<TrackListItemResponse>>.SuccessResponse(tracks,"Available tracks retrieved successfully."));
     }
 
-
+    // Admin, Instructor, Student
     [HttpGet("{id:int}")]
     [Authorize(Roles = "Admin,Instructor,Student")]
     public async Task<IActionResult> GetById(int id)
@@ -55,21 +49,12 @@ public async Task<IActionResult> GetAvailableTracks()
         var track = await _trackService.GetByIdAsync(id);
         if (track == null)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = "Track not found."
-            });
+            return NotFound(ApiResponse<object>.ErrorResponse("Track not found."));
         }
-
-        return Ok(new ApiResponse<TrackDetailsResponse>
-        {
-            Success = true,
-            Message = "Track retrieved successfully.",
-            Data = track
-        });
+        return Ok(ApiResponse<TrackDetailsResponse>.SuccessResponse(track,"Track retrieved successfully."));
     }
 
+    // Admin only
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(CreateTrackRequest request)
@@ -77,26 +62,17 @@ public async Task<IActionResult> GetAvailableTracks()
         try
         {
             var track = await _trackService.CreateAsync(request);
-            return CreatedAtAction(
-                nameof(GetById),
+            return CreatedAtAction(nameof(GetById),
                 new { id = track.TrainingTrackId },
-                new ApiResponse<TrackDetailsResponse>
-                {
-                    Success = true,
-                    Message = "Track created successfully.",
-                    Data = track
-                });
+                ApiResponse<TrackDetailsResponse>.SuccessResponse(track,"Track created successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
+    // Admin only
     [HttpPut("{id:int}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id,UpdateTrackRequest request)
@@ -106,30 +82,18 @@ public async Task<IActionResult> GetAvailableTracks()
             var track = await _trackService.UpdateAsync(id, request);
             if (track == null)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Track not found."
-                });
+                return NotFound(ApiResponse<object>.ErrorResponse("Track not found."));
             }
 
-            return Ok(new ApiResponse<TrackDetailsResponse>
-            {
-                Success = true,
-                Message = "Track updated successfully.",
-                Data = track
-            });
+            return Ok(ApiResponse<TrackDetailsResponse>.SuccessResponse( track,"Track updated successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
+    // Admin only
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
@@ -139,26 +103,14 @@ public async Task<IActionResult> GetAvailableTracks()
             var deleted = await _trackService.DeleteAsync(id);
             if (!deleted)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Track not found."
-                });
+                return NotFound(ApiResponse<object>.ErrorResponse("Track not found."));
             }
 
-            return Ok(new ApiResponse<object>
-            {
-                Success = true,
-                Message = "Track deleted successfully."
-            });
+            return Ok(ApiResponse<object>.SuccessResponse(null, "Track deleted successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 }

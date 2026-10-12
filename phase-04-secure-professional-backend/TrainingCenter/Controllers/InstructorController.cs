@@ -15,7 +15,6 @@ namespace TrainingCenter.Api.Controllers;
 public class InstructorController : ControllerBase
 {
     private readonly IInstructorService _instructorService;
-
     public InstructorController(IInstructorService instructorService)
     {
         _instructorService = instructorService;
@@ -27,13 +26,8 @@ public class InstructorController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var instructors = await _instructorService.GetAllAsync();
-
-        return Ok(new ApiResponse<List<InstructorListItemResponse>>
-        {
-            Success = true,
-            Message = "Instructors retrieved successfully.",
-            Data = instructors
-        });
+        return Ok(ApiResponse<List<InstructorListItemResponse>>.SuccessResponse(
+                instructors,"Instructors retrieved successfully."));
     }
 
     // Admin → any instructor
@@ -61,19 +55,10 @@ public class InstructorController : ControllerBase
 
         if (instructor == null)
         {
-            return NotFound(new ApiResponse<object>
-            {
-                Success = false,
-                Message = "Instructor not found."
-            });
+            return NotFound(ApiResponse<object>.ErrorResponse( "Instructor not found."));
         }
-
-        return Ok(new ApiResponse<InstructorDetailsResponse>
-        {
-            Success = true,
-            Message = "Instructor retrieved successfully.",
-            Data = instructor
-        });
+        return Ok(ApiResponse<InstructorDetailsResponse>.SuccessResponse(instructor,
+                "Instructor retrieved successfully."));
     }
 
     // Admin only
@@ -84,60 +69,34 @@ public class InstructorController : ControllerBase
         try
         {
             var instructor = await _instructorService.CreateAsync(request);
-
             return CreatedAtAction(nameof(GetById),
                 new { id = instructor.InstructorId },
-                new ApiResponse<InstructorListItemResponse>
-                {
-                    Success = true,
-                    Message = "Instructor created successfully.",
-                    Data = instructor
-                });
+                ApiResponse<InstructorListItemResponse>.SuccessResponse( instructor,"Instructor created successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest( ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
     // Admin only
     [HttpPut("{id:int}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Update(
-        int id,
-        UpdateInstructorRequest request)
+    public async Task<IActionResult> Update( int id,UpdateInstructorRequest request)
     {
         try
         {
             var instructor = await _instructorService.UpdateAsync(id, request);
-
             if (instructor == null)
             {
-                return NotFound(new ApiResponse<object>
-                {
-                    Success = false,
-                    Message = "Instructor not found."
-                });
+                return NotFound(ApiResponse<object>.ErrorResponse( "Instructor not found."));
             }
-
-            return Ok(new ApiResponse<InstructorListItemResponse>
-            {
-                Success = true,
-                Message = "Instructor updated successfully.",
-                Data = instructor
-            });
+            return Ok(ApiResponse<InstructorListItemResponse>.SuccessResponse(
+                    instructor, "Instructor updated successfully."));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ApiResponse<object>
-            {
-                Success = false,
-                Message = ex.Message
-            });
+            return BadRequest( ApiResponse<object>.ErrorResponse(ex.Message));
         }
     }
 
@@ -150,12 +109,10 @@ public class InstructorController : ControllerBase
         if (User.IsInRole("Instructor"))
         {
             var instructorIdClaim = User.FindFirstValue("InstructorId");
-
             if (!int.TryParse(instructorIdClaim, out var currentInstructorId))
             {
                 return Unauthorized();
             }
-
             if (currentInstructorId != id)
             {
                 return Forbid();
@@ -163,34 +120,20 @@ public class InstructorController : ControllerBase
         }
 
         var tracks = await _instructorService.GetTracksAsync(id);
-
-        return Ok(new ApiResponse<List<TrainingTrackListItemResponse>>
-        {
-            Success = true,
-            Message = "Instructor tracks retrieved successfully.",
-            Data = tracks
-        });
+        return Ok( ApiResponse<List<TrainingTrackListItemResponse>>.SuccessResponse(
+                tracks, "Instructor tracks retrieved successfully."));
     }
- 
-[HttpGet("/api/instructor/my-tracks")]
-[Authorize(Roles = "Instructor")]
-public async Task<IActionResult> GetMyTracks()
+
+    [HttpGet("/api/instructor/my-tracks")]
+    [Authorize(Roles = "Instructor")]
+    public async Task<IActionResult> GetMyTracks()
     {
         var instructorIdClaim = User.FindFirst("InstructorId")?.Value;
-
         if (!int.TryParse(instructorIdClaim, out var instructorId))
         {
             return Unauthorized();
         }
-
         var tracks = await _instructorService.GetTracksAsync(instructorId);
-
-        return Ok(new ApiResponse<List<TrainingTrackListItemResponse>>
-        {
-            Success = true,
-            Message = "My tracks retrieved successfully.",
-            Data = tracks
-        });
+        return Ok(ApiResponse<List<TrainingTrackListItemResponse>>.SuccessResponse(tracks,"My tracks retrieved successfully."));
     }
-
 }

@@ -1,38 +1,43 @@
 ﻿
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using System;
+using Microsoft.Extensions.Logging;
 using TrainingCenter.Data;
 using TrainingCenter.DTOs;
 using TrainingCenter.DTOs.Payment;
 using TrainingCenter.Entities;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace TrainingCenter.Services;
 
 public class PaymentService : IPaymentService
 {
     private readonly TrainingCenterDbContext _context;
-    public PaymentService(TrainingCenterDbContext context)
+    private readonly ILogger<PaymentService> _logger;
+
+    public PaymentService(
+        TrainingCenterDbContext context,
+        ILogger<PaymentService> logger)
     {
         _context = context;
+        _logger = logger;
     }
-    public async Task<List<PaymentResponse>> GetAllAsync( DateTime? from,DateTime? to,string? status)
+
+    public async Task<List<PaymentResponse>> GetAllAsync(
+        DateTime? from,
+        DateTime? to,
+        string? status)
     {
-        var query = _context.Payments .AsQueryable();
+        var query = _context.Payments.AsQueryable();
         if (from.HasValue)
         {
-            query = query.Where(p =>p.PaymentDate >= from.Value);
+            query = query.Where(p => p.PaymentDate >= from.Value);
         }
-
         if (to.HasValue)
         {
-            query = query.Where(p =>p.PaymentDate <= to.Value);
+            query = query.Where(p => p.PaymentDate <= to.Value);
         }
-
         if (!string.IsNullOrWhiteSpace(status))
         {
-            query = query.Where(p =>p.PaymentStatus == status);
+            query = query.Where(p => p.PaymentStatus == status);
         }
 
         return await query
@@ -52,7 +57,8 @@ public class PaymentService : IPaymentService
 
     public async Task<PaymentResponse?> GetByIdAsync(int id)
     {
-        return await _context.Payments.Where(p => p.PaymentId == id)
+        return await _context.Payments
+            .Where(p => p.PaymentId == id)
             .Select(p => new PaymentResponse
             {
                 PaymentId = p.PaymentId,
@@ -67,7 +73,7 @@ public class PaymentService : IPaymentService
             .FirstOrDefaultAsync();
     }
 
-    public async Task<PaymentResponse> CreateAsync( CreatePaymentRequest request)
+    public async Task<PaymentResponse> CreateAsync(CreatePaymentRequest request)
     {
         if (request.Amount <= 0)
         {
@@ -81,15 +87,18 @@ public class PaymentService : IPaymentService
 
         if (string.IsNullOrWhiteSpace(request.ReferenceNumber))
         {
-            throw new InvalidOperationException("Reference number is required.");
+            throw new InvalidOperationException( "Reference number is required.");
         }
-        var enrollmentExists = await _context.Enrollments.AnyAsync(e =>e.EnrollmentId == request.EnrollmentId);
+
+        var enrollmentExists = await _context.Enrollments.AnyAsync(e => e.EnrollmentId == request.EnrollmentId);
+
         if (!enrollmentExists)
         {
             throw new InvalidOperationException("Enrollment not found.");
         }
 
-        var referenceExists = await _context.Payments .AnyAsync(p => p.ReferenceNumber == request.ReferenceNumber);
+        var referenceExists = await _context.Payments
+            .AnyAsync(p => p.ReferenceNumber == request.ReferenceNumber);
 
         if (referenceExists)
         {
@@ -119,14 +128,22 @@ public class PaymentService : IPaymentService
             ReferenceNumber = request.ReferenceNumber,
             Notes = request.Notes
         };
+
         _context.Payments.Add(payment);
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Payment created successfully. PaymentId: {PaymentId}, EnrollmentId: {EnrollmentId}, Status: {Status}",
+            payment.PaymentId,
+            payment.EnrollmentId,
+            payment.PaymentStatus);
+
         return (await GetByIdAsync(payment.PaymentId))!;
     }
 
-    public async Task<PaymentResponse?> UpdateStatusAsync(int id, string status)
+    public async Task<PaymentResponse?> UpdateStatusAsync(int id,
+        string status)
     {
-        var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == id);
+        var payment = await _context.Payments .FirstOrDefaultAsync(p => p.PaymentId == id);
+
         if (payment == null)
         {
             return null;
@@ -145,21 +162,27 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Invalid payment status.");
         }
 
+        var previousStatus = payment.PaymentStatus;
         payment.PaymentStatus = status;
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Payment status updated successfully. PaymentId: {PaymentId}, EnrollmentId: {EnrollmentId}, PreviousStatus: {PreviousStatus}, NewStatus: {NewStatus}",
+            payment.PaymentId,
+            payment.EnrollmentId,
+            previousStatus,
+            payment.PaymentStatus);
+
         return await GetByIdAsync(id);
     }
 
-    public async Task<List<PaymentResponse>> GetEnrollmentPaymentsAsync(int enrollmentId)
+    public async Task<List<PaymentResponse>> GetEnrollmentPaymentsAsync( int enrollmentId)
     {
-        var enrollmentExists = await _context.Enrollments.AnyAsync(e =>e.EnrollmentId == enrollmentId);
-
+        var enrollmentExists = await _context.Enrollments.AnyAsync(e => e.EnrollmentId == enrollmentId);
         if (!enrollmentExists)
         {
             throw new InvalidOperationException("Enrollment not found.");
         }
-
-        return await _context.Payments.Where(p => p.EnrollmentId == enrollmentId)
+        return await _context.Payments
+            .Where(p => p.EnrollmentId == enrollmentId)
             .Select(p => new PaymentResponse
             {
                 PaymentId = p.PaymentId,
@@ -170,16 +193,12 @@ public class PaymentService : IPaymentService
                 PaymentStatus = p.PaymentStatus,
                 ReferenceNumber = p.ReferenceNumber,
                 Notes = p.Notes
-            })
-            .ToListAsync();
+            }).ToListAsync();
     }
+
     public async Task<int?> GetEnrollmentStudentIdAsync(int enrollmentId)
     {
-        return await _context.Enrollments
-            .Where(e => e.EnrollmentId == enrollmentId)
-            .Select(e => (int?)e.StudentId)
-            .FirstOrDefaultAsync();
+        return await _context.Enrollments.Where(e => e.EnrollmentId == enrollmentId)
+            .Select(e => (int?)e.StudentId).FirstOrDefaultAsync();
     }
 }
-
-
