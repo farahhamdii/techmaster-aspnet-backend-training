@@ -15,18 +15,21 @@ namespace TrainingCenter.Services
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly PasswordHasher<ApplicationUser> _passwordHasher;
         private readonly ILogger<AuthService> _logger;
+        private readonly IAuditService _auditService;
 
         public AuthService(
             TrainingCenterDbContext context,
             IJwtService jwtService,
             IRefreshTokenService refreshTokenService,
-            ILogger<AuthService> logger)
+            ILogger<AuthService> logger,
+            IAuditService auditService)
         {
             _context = context;
             _jwtService = jwtService;
             _refreshTokenService = refreshTokenService;
             _passwordHasher = new PasswordHasher<ApplicationUser>();
             _logger = logger;
+            _auditService = auditService;
         }
 
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -50,7 +53,7 @@ namespace TrainingCenter.Services
             if (emailExists)
                 throw new ArgumentException("An account with this email already exists.");
 
-            if (!Enum.TryParse<UserRole>( request.Role, true,out var role))
+            if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
             {
                 throw new ArgumentException("Invalid role. Allowed roles are Student and Instructor.");
             }
@@ -68,7 +71,7 @@ namespace TrainingCenter.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            user.PasswordHash = _passwordHasher.HashPassword(user,request.Password);
+            user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
             _context.Users.Add(user);
             if (role == UserRole.Student)
             {
@@ -92,10 +95,19 @@ namespace TrainingCenter.Services
 
             var (accessToken, accessTokenExpiresAt) = _jwtService.GenerateToken(user);
 
-            var refreshToken =await _refreshTokenService.CreateAsync(user);
+            var refreshToken = await _refreshTokenService.CreateAsync(user);
+
+            await _auditService.LogAsync(
+                action: "UserRegistered",
+                entityName: "ApplicationUser",
+                entityId: user.Id,
+                description: "A new user registered successfully.",
+                userId: user.Id,
+                userRole: user.Role.ToString()
+            );
 
             _logger.LogInformation("User registered successfully. UserId: {UserId}, Role: {Role}",
-                user.Id,user.Role);
+                user.Id, user.Role);
 
             return new AuthResponse
             {
@@ -119,7 +131,7 @@ namespace TrainingCenter.Services
 
             var email = request.Email.Trim().ToLowerInvariant();
 
-            var user = await _context.Users .FirstOrDefaultAsync(u => u.Email == email);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
             if (user == null)
             {
@@ -130,24 +142,34 @@ namespace TrainingCenter.Services
 
             if (!user.IsActive)
             {
-                _logger.LogWarning("Login failed: inactive account. UserId: {UserId}",user.Id);
+                _logger.LogWarning("Login failed: inactive account. UserId: {UserId}", user.Id);
 
                 throw new UnauthorizedAccessException("This account is inactive.");
             }
 
-            var passwordResult = _passwordHasher.VerifyHashedPassword(user,user.PasswordHash, request.Password);
+            var passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if (passwordResult == PasswordVerificationResult.Failed)
             {
-                _logger.LogWarning("Login failed: incorrect password. UserId: {UserId}",user.Id);
+                _logger.LogWarning("Login failed: incorrect password. UserId: {UserId}", user.Id);
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
 
             user.LastLoginAt = DateTime.UtcNow;
-            var (accessToken, accessTokenExpiresAt) =_jwtService.GenerateToken(user);
+            var (accessToken, accessTokenExpiresAt) = _jwtService.GenerateToken(user);
 
             var refreshToken = await _refreshTokenService.CreateAsync(user);
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Login successful. UserId: {UserId}, Role: {Role}",user.Id,user.Role);
+
+            await _auditService.LogAsync(
+                action: "UserLoggedIn",
+                entityName: "ApplicationUser",
+                entityId: user.Id,
+                description: "User logged in successfully.",
+                userId: user.Id,
+                userRole: user.Role.ToString()
+            );
+
+            _logger.LogInformation("Login successful. UserId: {UserId}, Role: {Role}", user.Id, user.Role);
 
             return new AuthResponse
             {
@@ -193,7 +215,7 @@ namespace TrainingCenter.Services
             };
         }
 
-        public async Task ChangePasswordAsync(int userId, string currentPassword,string newPassword, string confirmNewPassword)
+        public async Task ChangePasswordAsync(int userId, string currentPassword, string newPassword, string confirmNewPassword)
         {
             if (string.IsNullOrWhiteSpace(currentPassword))
                 throw new ArgumentException("Current password is required.");
@@ -211,16 +233,16 @@ namespace TrainingCenter.Services
             if (user == null)
                 throw new UnauthorizedAccessException("User not found.");
 
-            var passwordResult =_passwordHasher.VerifyHashedPassword( user,user.PasswordHash,currentPassword);
+            var passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
 
             if (passwordResult == PasswordVerificationResult.Failed)
             {
                 throw new ArgumentException("Current password is incorrect.");
             }
-            user.PasswordHash = _passwordHasher.HashPassword(user,newPassword);
+            user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
             user.UpdatedAt = DateTime.UtcNow;
             var activeRefreshTokens = await _context.RefreshTokens
-                .Where(r =>r.ApplicationUserId == userId &&r.RevokedAt == null).ToListAsync();
+                .Where(r => r.ApplicationUserId == userId && r.RevokedAt == null).ToListAsync();
 
             foreach (var token in activeRefreshTokens)
             {

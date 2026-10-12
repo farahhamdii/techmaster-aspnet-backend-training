@@ -12,13 +12,16 @@ public class PaymentService : IPaymentService
 {
     private readonly TrainingCenterDbContext _context;
     private readonly ILogger<PaymentService> _logger;
+    private readonly IAuditService _auditService;
 
     public PaymentService(
         TrainingCenterDbContext context,
-        ILogger<PaymentService> logger)
+        ILogger<PaymentService> logger,
+        IAuditService auditService)
     {
         _context = context;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<List<PaymentResponse>> GetAllAsync(
@@ -87,7 +90,7 @@ public class PaymentService : IPaymentService
 
         if (string.IsNullOrWhiteSpace(request.ReferenceNumber))
         {
-            throw new InvalidOperationException( "Reference number is required.");
+            throw new InvalidOperationException("Reference number is required.");
         }
 
         var enrollmentExists = await _context.Enrollments.AnyAsync(e => e.EnrollmentId == request.EnrollmentId);
@@ -131,6 +134,20 @@ public class PaymentService : IPaymentService
 
         _context.Payments.Add(payment);
         await _context.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            action: "PaymentCreated",
+            entityName: "Payment",
+            entityId: payment.PaymentId,
+            description: "Payment created successfully.",
+            metadata: System.Text.Json.JsonSerializer.Serialize(new
+            {
+                payment.EnrollmentId,
+                payment.Amount,
+                payment.PaymentStatus
+            })
+        );
+
         _logger.LogInformation("Payment created successfully. PaymentId: {PaymentId}, EnrollmentId: {EnrollmentId}, Status: {Status}",
             payment.PaymentId,
             payment.EnrollmentId,
@@ -142,7 +159,7 @@ public class PaymentService : IPaymentService
     public async Task<PaymentResponse?> UpdateStatusAsync(int id,
         string status)
     {
-        var payment = await _context.Payments .FirstOrDefaultAsync(p => p.PaymentId == id);
+        var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == id);
 
         if (payment == null)
         {
@@ -165,6 +182,20 @@ public class PaymentService : IPaymentService
         var previousStatus = payment.PaymentStatus;
         payment.PaymentStatus = status;
         await _context.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            action: "PaymentStatusUpdated",
+            entityName: "Payment",
+            entityId: payment.PaymentId,
+            description: "Payment status updated successfully.",
+            metadata: System.Text.Json.JsonSerializer.Serialize(new
+            {
+                OldStatus = previousStatus,
+                NewStatus = payment.PaymentStatus,
+                payment.EnrollmentId
+            })
+        );
+
         _logger.LogInformation("Payment status updated successfully. PaymentId: {PaymentId}, EnrollmentId: {EnrollmentId}, PreviousStatus: {PreviousStatus}, NewStatus: {NewStatus}",
             payment.PaymentId,
             payment.EnrollmentId,
@@ -174,7 +205,7 @@ public class PaymentService : IPaymentService
         return await GetByIdAsync(id);
     }
 
-    public async Task<List<PaymentResponse>> GetEnrollmentPaymentsAsync( int enrollmentId)
+    public async Task<List<PaymentResponse>> GetEnrollmentPaymentsAsync(int enrollmentId)
     {
         var enrollmentExists = await _context.Enrollments.AnyAsync(e => e.EnrollmentId == enrollmentId);
         if (!enrollmentExists)

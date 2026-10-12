@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using TrainingCenter.Data;
 using TrainingCenter.DTOs;
 using TrainingCenter.Entities;
@@ -8,10 +9,14 @@ namespace TrainingCenter.Services;
 public class TrainingTrackService : ITrainingTrackService
 {
     private readonly TrainingCenterDbContext _context;
+    private readonly IAuditService _auditService;
 
-    public TrainingTrackService(TrainingCenterDbContext context)
+    public TrainingTrackService(
+        TrainingCenterDbContext context,
+        IAuditService auditService)
     {
         _context = context;
+        _auditService = auditService;
     }
 
     public async Task<List<TrackListItemResponse>> GetAllAsync(
@@ -26,9 +31,7 @@ public class TrainingTrackService : ITrainingTrackService
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
-            query = query.Where(t =>
-                t.Title.Contains(keyword) ||
-                t.Code.Contains(keyword));
+            query = query.Where(t =>t.Title.Contains(keyword) ||t.Code.Contains(keyword));
         }
 
         if (!string.IsNullOrWhiteSpace(level))
@@ -43,8 +46,7 @@ public class TrainingTrackService : ITrainingTrackService
 
         if (instructorId.HasValue)
         {
-            query = query.Where(t =>
-                t.InstructorId == instructorId.Value);
+            query = query.Where(t =>t.InstructorId == instructorId.Value);
         }
 
         return await query
@@ -63,6 +65,7 @@ public class TrainingTrackService : ITrainingTrackService
             })
             .ToListAsync();
     }
+
     public async Task<TrackDetailsResponse?> GetByIdAsync(int id)
     {
         return await _context.TrainingTracks
@@ -91,6 +94,7 @@ public class TrainingTrackService : ITrainingTrackService
             })
             .FirstOrDefaultAsync();
     }
+
     public async Task<TrackDetailsResponse> CreateAsync(
     CreateTrackRequest request)
     {
@@ -113,7 +117,7 @@ public class TrainingTrackService : ITrainingTrackService
             throw new InvalidOperationException("Instructor not found or inactive.");
         }
 
-        var codeExists = await _context.TrainingTracks.AnyAsync(t =>t.Code == request.Code &&!t.IsDeleted);
+        var codeExists = await _context.TrainingTracks.AnyAsync(t => t.Code == request.Code && !t.IsDeleted);
         if (codeExists)
         {
             throw new InvalidOperationException("Track code already exists.");
@@ -136,18 +140,33 @@ public class TrainingTrackService : ITrainingTrackService
 
         await _context.SaveChangesAsync();
 
+        await _auditService.LogAsync(
+            action: "TrackCreated",
+            entityName: "TrainingTrack",
+            entityId: track.TrainingTrackId,
+            description: "Training track created successfully.",
+            metadata: System.Text.Json.JsonSerializer.Serialize(new
+            {
+                track.Title,
+                track.Code,
+                track.InstructorId,
+                track.Status
+            })
+        );
+
         return (await GetByIdAsync(track.TrainingTrackId))!;
     }
+
     public async Task<TrackDetailsResponse?> UpdateAsync(
     int id,
     UpdateTrackRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Title))
         {
-            throw new InvalidOperationException( "Track title is required.");
+            throw new InvalidOperationException("Track title is required.");
         }
         var track = await _context.TrainingTracks
-            .FirstOrDefaultAsync(t => t.TrainingTrackId == id &&!t.IsDeleted);
+            .FirstOrDefaultAsync(t => t.TrainingTrackId == id && !t.IsDeleted);
         if (track == null)
         {
             return null;
@@ -158,29 +177,31 @@ public class TrainingTrackService : ITrainingTrackService
         }
         if (request.EndDate <= request.StartDate)
         {
-            throw new InvalidOperationException( "End date must be after start date.");
+            throw new InvalidOperationException("End date must be after start date.");
         }
 
         var instructorExists = await _context.Instructors
-            .AnyAsync(i =>i.InstructorId == request.InstructorId && i.IsActive);
+            .AnyAsync(i => i.InstructorId == request.InstructorId && i.IsActive);
         if (!instructorExists)
         {
             throw new InvalidOperationException("Instructor not found or inactive.");
         }
 
         var codeExists = await _context.TrainingTracks
-            .AnyAsync(t =>t.Code == request.Code && t.TrainingTrackId != id &&!t.IsDeleted);
+            .AnyAsync(t => t.Code == request.Code && t.TrainingTrackId != id && !t.IsDeleted);
 
         if (codeExists)
         {
             throw new InvalidOperationException("Track code already exists.");
         }
 
-        var activeEnrollments = await _context.Enrollments.CountAsync(e => e.TrainingTrackId == id &&e.Status == "Active");
+        var activeEnrollments = await _context.Enrollments.CountAsync(e => e.TrainingTrackId == id && e.Status == "Active");
         if (request.Capacity < activeEnrollments)
         {
             throw new InvalidOperationException("Capacity cannot be less than current active enrollments.");
         }
+
+        var previousStatus = track.Status;
 
         track.Title = request.Title;
         track.Code = request.Code;
@@ -192,18 +213,34 @@ public class TrainingTrackService : ITrainingTrackService
         track.Status = request.Status;
         track.InstructorId = request.InstructorId;
         await _context.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            action: "TrackUpdated",
+            entityName: "TrainingTrack",
+            entityId: track.TrainingTrackId,
+            description: "Training track updated successfully.",
+            metadata: System.Text.Json.JsonSerializer.Serialize(new
+            {
+                OldStatus = previousStatus,
+                NewStatus = track.Status,
+                track.Title,
+                track.InstructorId
+            })
+        );
+
         return await GetByIdAsync(id);
     }
+
     public async Task<bool> DeleteAsync(int id)
     {
-        var track = await _context.TrainingTracks.FirstOrDefaultAsync(t =>t.TrainingTrackId == id &&!t.IsDeleted);
+        var track = await _context.TrainingTracks.FirstOrDefaultAsync(t => t.TrainingTrackId == id && !t.IsDeleted);
         if (track == null)
         {
             return false;
         }
 
         var hasActiveEnrollments = await _context.Enrollments
-            .AnyAsync(e =>e.TrainingTrackId == id &&e.Status == "Active");
+            .AnyAsync(e => e.TrainingTrackId == id && e.Status == "Active");
         if (hasActiveEnrollments)
         {
             throw new InvalidOperationException("Cannot delete a track with active enrollments.");
@@ -211,11 +248,25 @@ public class TrainingTrackService : ITrainingTrackService
 
         track.IsDeleted = true;
         await _context.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            action: "TrackDeleted",
+            entityName: "TrainingTrack",
+            entityId: track.TrainingTrackId,
+            description: "Training track soft-deleted successfully.",
+            metadata: System.Text.Json.JsonSerializer.Serialize(new
+            {
+                track.Title,
+                track.Code
+            })
+        );
+
         return true;
     }
+
     public async Task<List<TrackListItemResponse>> GetAvailableAsync()
     {
-        return await _context.TrainingTracks .Where(t =>!t.IsDeleted &&t.Status == "Active" &&
+        return await _context.TrainingTracks.Where(t => !t.IsDeleted && t.Status == "Active" &&
                 t.StartDate > DateTime.UtcNow &&
                 t.Enrollments.Count(e => e.Status == "Active") < t.Capacity)
             .Select(t => new TrackListItemResponse

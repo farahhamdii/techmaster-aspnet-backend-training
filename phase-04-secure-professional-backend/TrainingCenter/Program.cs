@@ -69,7 +69,8 @@ namespace TrainingCenter
             builder.Services.AddScoped<
                 IPasswordHasher<ApplicationUser>,
                 PasswordHasher<ApplicationUser>>();
-
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<IAuditService, AuditService>();
             builder.Services.AddEndpointsApiExplorer();
 
             builder.Services.AddSwaggerGen(options =>
@@ -111,12 +112,9 @@ namespace TrainingCenter
             {
                 var services = scope.ServiceProvider;
 
-                var context =
-                    services.GetRequiredService<TrainingCenterDbContext>();
+                var context = services.GetRequiredService<TrainingCenterDbContext>();
 
-                var passwordHasher =
-                    services.GetRequiredService<
-                        IPasswordHasher<ApplicationUser>>();
+                var passwordHasher =services.GetRequiredService<IPasswordHasher<ApplicationUser>>();
 
                 var adminEmail = "admin@trainingcenter.com";
 

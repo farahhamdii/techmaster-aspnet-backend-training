@@ -17,7 +17,7 @@ namespace TrainingCenter.Data
         public DbSet<ApplicationUser> Users { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
 
-
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -132,7 +132,41 @@ namespace TrainingCenter.Data
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(r => r.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Activity Log
+            modelBuilder.Entity<ActivityLog>(entity =>
+            {
+                entity.HasKey(a => a.Id);
+
+                entity.Property(a => a.UserRole)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(a => a.Action)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.EntityName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.Description)
+                    .IsRequired()
+                    .HasMaxLength(1000);
+
+                entity.Property(a => a.IpAddress)
+                    .HasMaxLength(45);
+
+                entity.Property(a => a.CorrelationId)
+                    .HasMaxLength(100);
+
+                entity.HasIndex(a => a.CreatedAt);
+
+                entity.HasIndex(a => a.UserId);
+
+                entity.HasIndex(a => a.EntityName);
+            });
         }
+
     
     }
 }

@@ -1,6 +1,5 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using TrainingCenter.Data;
 using TrainingCenter.DTOs;
 using TrainingCenter.DTOs.Payment;
@@ -12,16 +11,19 @@ namespace TrainingCenter.Services
     {
         private readonly TrainingCenterDbContext _context;
         private readonly ILogger<EnrollmentService> _logger;
+        private readonly IAuditService _auditService;
 
         public EnrollmentService(
             TrainingCenterDbContext context,
-            ILogger<EnrollmentService> logger)
+            ILogger<EnrollmentService> logger,
+            IAuditService auditService)
         {
             _context = context;
             _logger = logger;
+            _auditService = auditService;
         }
 
-        public async Task<List<EnrollmentDetailsResponse>> GetAllAsync(string? status,int? trackId,
+        public async Task<List<EnrollmentDetailsResponse>> GetAllAsync(string? status, int? trackId,
             int? studentId,
             string? paymentStatus)
         {
@@ -45,7 +47,7 @@ namespace TrainingCenter.Services
 
             if (!string.IsNullOrWhiteSpace(paymentStatus))
             {
-                query = query.Where(e =>e.Payments.Any(p => p.PaymentStatus == paymentStatus));
+                query = query.Where(e => e.Payments.Any(p => p.PaymentStatus == paymentStatus));
             }
 
             return await query
@@ -92,7 +94,7 @@ namespace TrainingCenter.Services
                     Status = e.Status,
                     ProgressPercentage = e.ProgressPercentage,
                     FinalResult = e.FinalResult,
-                    TotalPaid = e.Payments .Where(p => p.PaymentStatus == "Paid").Sum(p => p.Amount),
+                    TotalPaid = e.Payments.Where(p => p.PaymentStatus == "Paid").Sum(p => p.Amount),
 
                     Payments = e.Payments
                         .Select(p => new PaymentResponse
@@ -113,7 +115,7 @@ namespace TrainingCenter.Services
         public async Task<EnrollmentDetailsResponse> CreateAsync(CreateEnrollmentRequest request)
         {
             var studentExists = await _context.Students
-                .AnyAsync(s =>s.StudentId == request.StudentId &&
+                .AnyAsync(s => s.StudentId == request.StudentId &&
                     s.IsActive && !s.IsDeleted);
 
             if (!studentExists)
@@ -122,7 +124,7 @@ namespace TrainingCenter.Services
             }
 
             var track = await _context.TrainingTracks
-                .FirstOrDefaultAsync(t => t.TrainingTrackId == request.TrainingTrackId &&!t.IsDeleted);
+                .FirstOrDefaultAsync(t => t.TrainingTrackId == request.TrainingTrackId && !t.IsDeleted);
 
             if (track == null)
             {
@@ -135,7 +137,7 @@ namespace TrainingCenter.Services
             }
 
             var duplicateEnrollment = await _context.Enrollments
-                .AnyAsync(e =>e.StudentId == request.StudentId &&
+                .AnyAsync(e => e.StudentId == request.StudentId &&
                     e.TrainingTrackId == request.TrainingTrackId && e.Status != "Cancelled");
 
             if (duplicateEnrollment)
@@ -144,7 +146,7 @@ namespace TrainingCenter.Services
             }
 
             var activeEnrollments = await _context.Enrollments
-                .CountAsync(e =>e.TrainingTrackId == request.TrainingTrackId &&e.Status == "Active");
+                .CountAsync(e => e.TrainingTrackId == request.TrainingTrackId && e.Status == "Active");
 
             if (activeEnrollments >= track.Capacity)
             {
@@ -163,6 +165,20 @@ namespace TrainingCenter.Services
 
             _context.Enrollments.Add(enrollment);
             await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                action: "EnrollmentRequested",
+                entityName: "Enrollment",
+                entityId: enrollment.EnrollmentId,
+                description: "Enrollment requested successfully.",
+                metadata: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    enrollment.StudentId,
+                    enrollment.TrainingTrackId,
+                    enrollment.Status
+                })
+            );
+
             _logger.LogInformation("Enrollment created successfully. EnrollmentId: {EnrollmentId}, StudentId: {StudentId}, TrainingTrackId: {TrainingTrackId}, Status: {Status}",
                 enrollment.EnrollmentId,
                 enrollment.StudentId,
@@ -172,9 +188,9 @@ namespace TrainingCenter.Services
             return (await GetByIdAsync(enrollment.EnrollmentId))!;
         }
 
-        public async Task<EnrollmentDetailsResponse?> UpdateStatusAsync(int id,string status)
+        public async Task<EnrollmentDetailsResponse?> UpdateStatusAsync(int id, string status)
         {
-            var enrollment = await _context.Enrollments .FirstOrDefaultAsync(e => e.EnrollmentId == id);
+            var enrollment = await _context.Enrollments.FirstOrDefaultAsync(e => e.EnrollmentId == id);
 
             if (enrollment == null)
             {
@@ -215,6 +231,20 @@ namespace TrainingCenter.Services
 
             await _context.SaveChangesAsync();
 
+            await _auditService.LogAsync(
+                action: "EnrollmentStatusUpdated",
+                entityName: "Enrollment",
+                entityId: enrollment.EnrollmentId,
+                description: "Enrollment status updated successfully.",
+                metadata: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    OldStatus = previousStatus,
+                    NewStatus = enrollment.Status,
+                    enrollment.StudentId,
+                    enrollment.TrainingTrackId
+                })
+            );
+
             _logger.LogInformation("Enrollment status updated successfully. EnrollmentId: {EnrollmentId}, PreviousStatus: {PreviousStatus}, NewStatus: {NewStatus}",
                 enrollment.EnrollmentId,
                 previousStatus,
@@ -243,7 +273,7 @@ namespace TrainingCenter.Services
             int pageNumber,
             int pageSize)
         {
-            var query = _context.Enrollments.AsNoTracking() .AsQueryable();
+            var query = _context.Enrollments.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(status))
             {
@@ -262,7 +292,7 @@ namespace TrainingCenter.Services
 
             if (!string.IsNullOrWhiteSpace(paymentStatus))
             {
-                query = query.Where(e =>e.Payments.Any(p => p.PaymentStatus == paymentStatus));
+                query = query.Where(e => e.Payments.Any(p => p.PaymentStatus == paymentStatus));
             }
 
             var totalCount = await query.CountAsync();
@@ -296,7 +326,7 @@ namespace TrainingCenter.Services
                         .ToList()
                 })
                 .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize) .ToListAsync();
+                .Take(pageSize).ToListAsync();
 
             return new PagedResult<EnrollmentDetailsResponse>
             {
@@ -320,6 +350,20 @@ namespace TrainingCenter.Services
             enrollment.IsDeleted = true;
             enrollment.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                action: "EnrollmentDeleted",
+                entityName: "Enrollment",
+                entityId: enrollment.EnrollmentId,
+                description: "Enrollment soft-deleted successfully.",
+                metadata: System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    enrollment.StudentId,
+                    enrollment.TrainingTrackId,
+                    enrollment.Status
+                })
+            );
+
             _logger.LogInformation("Enrollment soft deleted successfully. EnrollmentId: {EnrollmentId}, StudentId: {StudentId}, TrainingTrackId: {TrainingTrackId}",
                 enrollment.EnrollmentId,
                 enrollment.StudentId,
@@ -330,7 +374,7 @@ namespace TrainingCenter.Services
 
         public async Task<int?> GetTrackInstructorIdAsync(int trackId)
         {
-            return await _context.TrainingTracks.Where(t =>t.TrainingTrackId == trackId &&!t.IsDeleted)
+            return await _context.TrainingTracks.Where(t => t.TrainingTrackId == trackId && !t.IsDeleted)
                 .Select(t => (int?)t.InstructorId)
                 .FirstOrDefaultAsync();
         }
