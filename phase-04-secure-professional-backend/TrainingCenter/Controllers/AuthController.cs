@@ -21,12 +21,22 @@ namespace TrainingCenter.Controllers
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register(
-            RegisterRequest request)
+            [FromBody] RegisterRequest request)
         {
             try
             {
                 var result = await _authService.RegisterAsync(request);
-                return Ok(result);
+
+                return StatusCode(
+                    StatusCodes.Status201Created,
+                    result);
+            }
+            catch (ForbiddenAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    message = ex.Message
+                });
             }
             catch (ArgumentException ex)
             {
@@ -40,11 +50,12 @@ namespace TrainingCenter.Controllers
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login(
-            LoginRequest request)
+            [FromBody] LoginRequest request)
         {
             try
             {
-                var result =await _authService.LoginAsync(request);
+                var result = await _authService.LoginAsync(request);
+
                 return Ok(result);
             }
             catch (ArgumentException ex)
@@ -67,9 +78,10 @@ namespace TrainingCenter.Controllers
         [Authorize]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var userIdClaim = User.FindFirstValue( ClaimTypes.NameIdentifier);
+            var userIdClaim = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
-            if (!int.TryParse(userIdClaim,out var userId))
+            if (!int.TryParse(userIdClaim, out var userId))
             {
                 return Unauthorized(new
                 {
@@ -79,7 +91,8 @@ namespace TrainingCenter.Controllers
 
             try
             {
-                var result =await _authService.GetCurrentUserAsync(userId);
+                var result = await _authService.GetCurrentUserAsync(userId);
+
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -94,11 +107,13 @@ namespace TrainingCenter.Controllers
         [HttpPost("refresh-token")]
         [AllowAnonymous]
         public async Task<IActionResult> RefreshToken(
-            RefreshTokenRequest request)
+            [FromBody] RefreshTokenRequest request)
         {
             try
             {
-                var result =await _authService.RefreshTokenAsync( request.RefreshToken);
+                var result = await _authService.RefreshTokenAsync(
+                    request.RefreshToken);
+
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -112,10 +127,13 @@ namespace TrainingCenter.Controllers
 
         [HttpPost("change-password")]
         [Authorize]
-        public async Task<IActionResult> ChangePassword( ChangePasswordRequest request)
+        public async Task<IActionResult> ChangePassword(
+            [FromBody] ChangePasswordRequest request)
         {
-            var userIdClaim = User.FindFirstValue( ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdClaim,out var userId))
+            var userIdClaim = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userIdClaim, out var userId))
             {
                 return Unauthorized(new
                 {
@@ -154,9 +172,10 @@ namespace TrainingCenter.Controllers
 
         [HttpPost("logout")]
         [AllowAnonymous]
-        public async Task<IActionResult> Logout( LogoutRequest request)
+        public async Task<IActionResult> Logout(
+            [FromBody] LogoutRequest request)
         {
-            await _authService.LogoutAsync( request.RefreshToken);
+            await _authService.LogoutAsync(request.RefreshToken);
 
             return NoContent();
         }

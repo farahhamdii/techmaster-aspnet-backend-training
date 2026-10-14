@@ -1,4 +1,5 @@
 ﻿
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ namespace TrainingCenter.Services
         private readonly TrainingCenterDbContext _context;
         private readonly IJwtService _jwtService;
         private readonly IRefreshTokenService _refreshTokenService;
-        private readonly PasswordHasher<ApplicationUser> _passwordHasher;
+        private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
         private readonly ILogger<AuthService> _logger;
         private readonly IAuditService _auditService;
 
@@ -21,81 +22,111 @@ namespace TrainingCenter.Services
             TrainingCenterDbContext context,
             IJwtService jwtService,
             IRefreshTokenService refreshTokenService,
+            IPasswordHasher<ApplicationUser> passwordHasher,
             ILogger<AuthService> logger,
             IAuditService auditService)
         {
             _context = context;
             _jwtService = jwtService;
             _refreshTokenService = refreshTokenService;
-            _passwordHasher = new PasswordHasher<ApplicationUser>();
+            _passwordHasher = passwordHasher;
             _logger = logger;
             _auditService = auditService;
         }
 
-        public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+        public async Task<AuthResponse> RegisterAsync(
+            RegisterRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.FullName))
                 throw new ArgumentException("Full name is required.");
 
+            var fullName = request.FullName.Trim();
+
+            if (fullName.Length < 2 || fullName.Length > 100)
+                throw new ArgumentException(
+                    "Full name must be between 2 and 100 characters.");
+
             if (string.IsNullOrWhiteSpace(request.Email))
                 throw new ArgumentException("Email is required.");
 
+            var email = request.Email.Trim().ToLowerInvariant();
+
+            if (email.Length > 256 ||
+                !new EmailAddressAttribute().IsValid(email))
+            {
+                throw new ArgumentException("Invalid email address.");
+            }
+
             if (string.IsNullOrWhiteSpace(request.Password))
                 throw new ArgumentException("Password is required.");
+
+            if (request.Password.Length > 128)
+                throw new ArgumentException(
+                    "Password cannot exceed 128 characters.");
 
             if (request.Password != request.ConfirmPassword)
                 throw new ArgumentException("Passwords do not match.");
 
             ValidatePasswordStrength(request.Password);
 
-            var email = request.Email.Trim().ToLowerInvariant();
-            var emailExists = await _context.Users.AnyAsync(u => u.Email == email);
+            var emailExists = await _context.Users
+                .AnyAsync(u => u.Email == email);
+
             if (emailExists)
+            {
                 throw new ArgumentException("An account with this email already exists.");
-
-            if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
-            {
-                throw new ArgumentException("Invalid role. Allowed roles are Student and Instructor.");
-            }
-            if (role == UserRole.Admin)
-            {
-                throw new ArgumentException("You cannot register as Admin.");
             }
 
-            var user = new ApplicationUser
+            if (!Enum.TryParse<UserRole>(
+                    request.Role,
+                    true,
+                    out var role) ||
+                !Enum.IsDefined(role))
             {
-                FullName = request.FullName.Trim(),
+                throw new ArgumentException("Invalid role.");
+            }
+
+            // Public registration is restricted to Student accounts.
+            // Instructor and Admin accounts must be created through
+            // authorized administrative workflows.
+            if (role != UserRole.Student)
+            {
+                throw new ForbiddenAccessException( "You are not allowed to register with this role.");
+            }
+
+            var student = new Student
+            {
+                FullName = fullName,
                 Email = email,
-                Role = role,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
 
-            user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+            _context.Students.Add(student);
+            await _context.SaveChangesAsync();
+
+            var user = new ApplicationUser
+            {
+                FullName = fullName,
+                Email = email,
+                Role = UserRole.Student,
+                StudentId = student.StudentId,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            user.PasswordHash = _passwordHasher.HashPassword(
+                user,
+                request.Password);
+
             _context.Users.Add(user);
-            if (role == UserRole.Student)
-            {
-                var student = new Student
-                {
-                    FullName = request.FullName.Trim(),
-                    Email = email,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
+            await _context.SaveChangesAsync();
 
-                _context.Students.Add(student);
-                await _context.SaveChangesAsync();
-                user.StudentId = student.StudentId;
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                await _context.SaveChangesAsync();
-            }
+            var (accessToken, accessTokenExpiresAt) =
+                _jwtService.GenerateToken(user);
 
-            var (accessToken, accessTokenExpiresAt) = _jwtService.GenerateToken(user);
-
-            var refreshToken = await _refreshTokenService.CreateAsync(user);
+            var refreshToken =
+                await _refreshTokenService.CreateAsync(user);
 
             await _auditService.LogAsync(
                 action: "UserRegistered",
@@ -103,11 +134,12 @@ namespace TrainingCenter.Services
                 entityId: user.Id,
                 description: "A new user registered successfully.",
                 userId: user.Id,
-                userRole: user.Role.ToString()
-            );
+                userRole: user.Role.ToString());
 
-            _logger.LogInformation("User registered successfully. UserId: {UserId}, Role: {Role}",
-                user.Id, user.Role);
+            _logger.LogInformation(
+                "User registered successfully. UserId: {UserId}, Role: {Role}",
+                user.Id,
+                user.Role);
 
             return new AuthResponse
             {
@@ -121,43 +153,60 @@ namespace TrainingCenter.Services
             };
         }
 
-        public async Task<AuthResponse> LoginAsync(LoginRequest request)
+        public async Task<AuthResponse> LoginAsync( LoginRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Email))
-                throw new ArgumentException("Email is required.");
+            if (string.IsNullOrWhiteSpace(request.Email) ||!new EmailAddressAttribute().IsValid(
+                    request.Email.Trim()))
+            {
+                throw new ArgumentException("Invalid email address.");
+            }
 
             if (string.IsNullOrWhiteSpace(request.Password))
                 throw new ArgumentException("Password is required.");
 
             var email = request.Email.Trim().ToLowerInvariant();
-
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
             if (user == null)
             {
-                _logger.LogWarning("Login failed: account was not found.");
-
+                _logger.LogWarning("Login failed: invalid credentials.");
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
 
             if (!user.IsActive)
             {
-                _logger.LogWarning("Login failed: inactive account. UserId: {UserId}", user.Id);
-
-                throw new UnauthorizedAccessException("This account is inactive.");
+                _logger.LogWarning("Login failed: inactive account. UserId: {UserId}",user.Id);
+                throw new UnauthorizedAccessException( "This account is inactive.");
             }
 
-            var passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+            var passwordResult =
+                _passwordHasher.VerifyHashedPassword(
+                    user,
+                    user.PasswordHash,
+                    request.Password);
+
             if (passwordResult == PasswordVerificationResult.Failed)
             {
-                _logger.LogWarning("Login failed: incorrect password. UserId: {UserId}", user.Id);
+                _logger.LogWarning("Login failed: invalid credentials. UserId: {UserId}",user.Id);
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
 
-            user.LastLoginAt = DateTime.UtcNow;
-            var (accessToken, accessTokenExpiresAt) = _jwtService.GenerateToken(user);
+            if (passwordResult ==
+                PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                user.PasswordHash = _passwordHasher.HashPassword(
+                    user,
+                    request.Password);
+            }
 
-            var refreshToken = await _refreshTokenService.CreateAsync(user);
+            user.LastLoginAt = DateTime.UtcNow;
+
+            var (accessToken, accessTokenExpiresAt) =
+                _jwtService.GenerateToken(user);
+
+            var refreshToken =
+                await _refreshTokenService.CreateAsync(user);
+
             await _context.SaveChangesAsync();
 
             await _auditService.LogAsync(
@@ -166,10 +215,11 @@ namespace TrainingCenter.Services
                 entityId: user.Id,
                 description: "User logged in successfully.",
                 userId: user.Id,
-                userRole: user.Role.ToString()
-            );
+                userRole: user.Role.ToString());
 
-            _logger.LogInformation("Login successful. UserId: {UserId}, Role: {Role}", user.Id, user.Role);
+            _logger.LogInformation("Login successful. UserId: {UserId}, Role: {Role}",
+                user.Id,
+                user.Role);
 
             return new AuthResponse
             {
@@ -186,9 +236,10 @@ namespace TrainingCenter.Services
         public async Task<CurrentUserResponse> GetCurrentUserAsync(int userId)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            if (user == null)
-                throw new UnauthorizedAccessException("User not found.");
-
+            if (user == null || !user.IsActive)
+            {
+                throw new UnauthorizedAccessException( "User not found or inactive.");
+            }
             return new CurrentUserResponse
             {
                 UserId = user.Id,
@@ -200,9 +251,17 @@ namespace TrainingCenter.Services
             };
         }
 
-        public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
+        public async Task<AuthResponse> RefreshTokenAsync(
+            string refreshToken)
         {
-            var result = await _refreshTokenService.RefreshAsync(refreshToken);
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                throw new UnauthorizedAccessException("Invalid refresh token.");
+            }
+
+            var result =
+                await _refreshTokenService.RefreshAsync(refreshToken);
+
             return new AuthResponse
             {
                 AccessToken = result.NewAccessToken,
@@ -215,7 +274,11 @@ namespace TrainingCenter.Services
             };
         }
 
-        public async Task ChangePasswordAsync(int userId, string currentPassword, string newPassword, string confirmNewPassword)
+        public async Task ChangePasswordAsync(
+            int userId,
+            string currentPassword,
+            string newPassword,
+            string confirmNewPassword)
         {
             if (string.IsNullOrWhiteSpace(currentPassword))
                 throw new ArgumentException("Current password is required.");
@@ -223,26 +286,34 @@ namespace TrainingCenter.Services
             if (string.IsNullOrWhiteSpace(newPassword))
                 throw new ArgumentException("New password is required.");
 
+            if (newPassword.Length > 128)
+                throw new ArgumentException("Password cannot exceed 128 characters.");
+
             if (newPassword != confirmNewPassword)
                 throw new ArgumentException("Passwords do not match.");
-
             ValidatePasswordStrength(newPassword);
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (user == null)
-                throw new UnauthorizedAccessException("User not found.");
+            if (user == null || !user.IsActive)
+            {
+                throw new UnauthorizedAccessException("User not found or inactive.");
+            }
 
-            var passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+            var passwordResult = _passwordHasher.VerifyHashedPassword(user,user.PasswordHash, currentPassword);
 
             if (passwordResult == PasswordVerificationResult.Failed)
             {
-                throw new ArgumentException("Current password is incorrect.");
+                throw new UnauthorizedAccessException("Current password is incorrect.");
             }
-            user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+
+            user.PasswordHash = _passwordHasher.HashPassword(user,newPassword);
+
             user.UpdatedAt = DateTime.UtcNow;
+
             var activeRefreshTokens = await _context.RefreshTokens
-                .Where(r => r.ApplicationUserId == userId && r.RevokedAt == null).ToListAsync();
+                .Where(r =>r.ApplicationUserId == userId && r.RevokedAt == null)
+                .ToListAsync();
 
             foreach (var token in activeRefreshTokens)
             {
@@ -250,6 +321,14 @@ namespace TrainingCenter.Services
             }
 
             await _context.SaveChangesAsync();
+
+            await _auditService.LogAsync(
+                action: "PasswordChanged",
+                entityName: "ApplicationUser",
+                entityId: user.Id,
+                description: "User changed their password.",
+                userId: user.Id,
+                userRole: user.Role.ToString());
 
             _logger.LogInformation("Password changed successfully. UserId: {UserId}", userId);
         }
