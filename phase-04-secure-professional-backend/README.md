@@ -40,10 +40,10 @@ The main focus of this phase is authentication, authorization, secure business w
 | Task 02 - Role Stories & Access Control | DONE | Admin, Instructor and Student authorization |
 | Task 03 - Secure Platform Upgrade | DONE | Protect existing platform workflows |
 | Task 04 - Professional Architecture Refactor | DONE | Improve structure, services and DTOs |
-| Task 05 - Validation, Errors & Logging | Not Started | Validation, middleware and logging |
-| Task 06 - Production Redeployment | Not Started | Redeploy secure API and verify production |
-| Task 07 - Audit & Activity Timeline | Not Started | Track important user activities |
-| Task 08 - Bad Auth Refactor Pack | Not Started | Refactor insecure authentication code |
+| Task 05 - Validation, Errors & Logging | DONE | Validation, middleware and logging |
+| Task 06 - Production Redeployment | DONE | Redeploy secure API and verify production |
+| Task 07 - Audit & Activity Timeline | DONE | Track important user activities |
+| Task 08 - Bad Auth Refactor Pack | DONE | Refactor insecure authentication code |
 | Task 09 - Demo & LinkedIn Showcase | Not Started | Final documentation and public showcase |
 
 ## Phase 03 Limitations
